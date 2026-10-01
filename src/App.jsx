@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Dumbbell, Plus, Trash2, Search, X, ChevronRight, ChevronLeft, Save } from "lucide-react";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { loadGymData, saveWorkoutDoc, deleteWorkoutDoc, saveConfigDoc } from "./firebaseClient";
 
 // ---------- Dati di base (identici all'app principale) ----------
@@ -162,6 +163,25 @@ function DeleteButton({ onConfirm, small }) {
     <button className="btn-icon delete-icon-btn" title="Elimina" onClick={() => setConfirming(true)}>
       <Trash2 size={small ? 20 : 24} />
     </button>
+  );
+}
+
+function PinnedTooltip({ active, payload, label, labelFormatter, formatter, valueColor, onClose }) {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div className="pinned-tooltip-box" style={{ background: "var(--surface-2)", border: "1px solid var(--border-c)", borderRadius: 8, padding: "18px 22px", minWidth: 200 }}>
+      <div style={{ color: "var(--text-dim)", fontSize: 15, marginBottom: 8 }}>
+        {labelFormatter ? labelFormatter(label, payload) : label}
+      </div>
+      {payload.map((entry, i) => {
+        const [val, name] = formatter ? formatter(entry.value, entry.name, entry) : [entry.value, entry.name];
+        return (
+          <div key={i} style={{ color: valueColor || "#ffffff", fontWeight: 700, fontSize: 20, marginBottom: 3 }}>
+            {name}: {val}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -598,6 +618,109 @@ function SerieSettimanaliTab({ workouts, exercises }) {
   );
 }
 
+// ---------- Analisi della Forza: e1RM stimato, identico all'app principale ----------
+
+function AnalisiForzaTab({ workouts, exercises }) {
+  const usedExerciseIds = [...new Set(workouts.flatMap((w) => w.exercises.map((it) => it.exerciseId)))];
+  const usableExercises = exercises.filter((e) => usedExerciseIds.includes(e.id));
+
+  const [e1rmExId, setE1rmExId] = useState("");
+  const [e1rmMode, setE1rmMode] = useState("kg");
+  const [pinnedE1rm, setPinnedE1rm] = useState(null);
+
+  function togglePinned(current, setCurrent, key, x, y) {
+    setCurrent((prev) => (prev && prev.key === key ? null : { key, x, y }));
+  }
+
+  useEffect(() => {
+    function handleOutsideClick(e) {
+      if (!e.target.closest(".chart-relative-wrap")) setPinnedE1rm(null);
+    }
+    document.addEventListener("click", handleOutsideClick, true);
+    return () => document.removeEventListener("click", handleOutsideClick, true);
+  }, []);
+
+  const e1rmExIdAttivo = usableExercises.some((e) => e.id === e1rmExId) ? e1rmExId : (usableExercises[0] ? usableExercises[0].id : "");
+
+  const e1rmWeeklyData = useMemo(() => {
+    if (!e1rmExIdAttivo) return [];
+    const weekMap = {};
+    workouts.forEach((w) => {
+      const it = w.exercises.find((it) => it.exerciseId === e1rmExIdAttivo);
+      if (!it) return;
+      it.sets.forEach((s) => {
+        const reps = Number(s.reps) || 0;
+        const weight = Number(s.weight) || 0;
+        if (reps < 1 || reps > 6 || weight <= 0) return;
+        const e1rm = weight * (1 + reps / 30);
+        const weekStart = isoOf(getMonday(w.date));
+        if (!weekMap[weekStart] || e1rm > weekMap[weekStart]) weekMap[weekStart] = e1rm;
+      });
+    });
+    const weeks = Object.keys(weekMap).sort();
+    if (weeks.length === 0) return [];
+    const iniziale = weekMap[weeks[0]];
+    return weeks.map((wk, idx) => {
+      const val = weekMap[wk];
+      return { settimana: `S${idx + 1}`, periodo: formatDateShort(wk), e1rm: round1(val), percento: round1((val / iniziale) * 100) };
+    });
+  }, [workouts, e1rmExIdAttivo]);
+
+  return (
+    <div className="progressi-dark">
+      <div className="chart-uniform-wrap">
+        <Section title={e1rmMode === "kg" ? "Progressione della forza — e1RM stimato" : "Progressione della forza — variazione percentuale"} right={
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <select className="input input-sm-w" value={e1rmExIdAttivo} onChange={(e) => setE1rmExId(e.target.value)}>
+              {usableExercises.length === 0 && <option value="">Nessun dato</option>}
+              {usableExercises.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </select>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button className={"btn " + (e1rmMode === "kg" ? "btn-primary" : "btn-ghost")} onClick={() => setE1rmMode("kg")}>e1RM (kg)</button>
+              <button className={"btn " + (e1rmMode === "percent" ? "btn-primary" : "btn-ghost")} onClick={() => setE1rmMode("percent")}>Progressione (%)</button>
+            </div>
+          </div>
+        }>
+          <p className="hint" style={{ marginBottom: 10 }}>
+            Calcolato con la formula di Epley (peso × (1 + rip/30)) sulle serie da 1 a 6 ripetizioni; per ogni settimana viene preso il valore più alto.
+          </p>
+          {e1rmWeeklyData.length === 0 ? <p className="muted">Nessuna serie valida (1-6 ripetizioni) trovata per questo esercizio.</p> : (
+            <div className="chart-relative-wrap" style={{ height: 260 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={e1rmWeeklyData}
+                  onClick={(state) => { if (state && state.activeLabel) togglePinned(pinnedE1rm, setPinnedE1rm, state.activeLabel, state.chartX, state.chartY); }}>
+                  <CartesianGrid stroke="var(--border-c)" strokeDasharray="3 3" />
+                  <XAxis dataKey="settimana" stroke="var(--text-dim)" fontSize={11} label={{ value: "Settimana", position: "insideBottom", offset: -3, fill: "var(--text-dim)", fontSize: 11 }} />
+                  <YAxis stroke="var(--text-dim)" fontSize={11} label={{ value: e1rmMode === "kg" ? "1RM stimato (kg)" : "Performance (%)", angle: -90, position: "insideLeft", fill: "var(--text-dim)", fontSize: 11 }} />
+                  <Tooltip
+                    active={pinnedE1rm ? true : undefined}
+                    payload={pinnedE1rm ? (() => {
+                      const p = e1rmWeeklyData.find((d) => d.settimana === pinnedE1rm.key);
+                      return p ? [{
+                        name: e1rmMode === "kg" ? "e1RM (kg)" : "Performance (%)",
+                        value: e1rmMode === "kg" ? p.e1rm : p.percento,
+                        dataKey: e1rmMode === "kg" ? "e1rm" : "percento",
+                        payload: p, color: "var(--accent)"
+                      }] : undefined;
+                    })() : undefined}
+                    label={pinnedE1rm ? pinnedE1rm.key : undefined}
+                    coordinate={pinnedE1rm ? { x: pinnedE1rm.x, y: pinnedE1rm.y } : undefined}
+                    wrapperStyle={{ pointerEvents: "auto" }}
+                    content={(props) => <PinnedTooltip {...props} onClose={() => setPinnedE1rm(null)}
+                      labelFormatter={(label, payload) => (payload && payload[0] ? `${label} (${payload[0].payload.periodo})` : label)}
+                      formatter={(value) => e1rmMode === "kg" ? [`${value} kg`, "e1RM"] : [`${value}%`, "Performance"]} />}
+                  />
+                  <Line type="monotone" dataKey={e1rmMode === "kg" ? "e1rm" : "percento"} stroke="var(--accent)" strokeWidth={2} dot={{ r: 3 }} name={e1rmMode === "kg" ? "e1RM (kg)" : "Performance (%)"} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </Section>
+      </div>
+    </div>
+  );
+}
+
 // ---------- Settimana: identica funzionalmente e nei colori all'app principale ----------
 
 function AllenamentiTab({ workouts, exercises }) {
@@ -888,6 +1011,14 @@ export default function App() {
         .stats-row span{ text-align:left; }
         .stats-row-head{ color:var(--text-dim); font-size:14px; text-transform:uppercase; border-bottom:1px solid var(--border-c); }
         .week-nav{ display:flex; align-items:center; gap:14px; margin-bottom:8px; font-weight:700; color:var(--text); font-size:19px; }
+        .progressi-dark{
+          --bg:#161915; --surface:#1c1f1a; --surface-2:#242821; --border-c:#38402f;
+          --text:#e8ece5; --text-dim:#9fb89a; --accent:#7be08a; --accent-dim:#2c3126;
+          background:var(--bg); border-radius:12px; padding:16px;
+        }
+        .progressi-dark .btn-primary{ color:#0f1310; }
+        .chart-relative-wrap{ position:relative; }
+        .input-sm-w{ width:auto; max-width:320px; }
         .volume-badge{ display:inline-flex; align-items:center; justify-content:center; width:92px; max-width:100%; box-sizing:border-box; background:#1f6b3a; color:#ffffff; font-weight:700; padding:3px 6px; border-radius:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .mode-btn-row{ display:flex; gap:6px; justify-content:flex-start; flex-wrap:wrap; margin-bottom:10px; }
         .mode-btn-row .btn{ font-size:17px; padding:8px 16px; }
@@ -906,6 +1037,15 @@ export default function App() {
           .input-kg, .box-kg{ font-size:22px; }
           .group-ex-row span{ font-weight:700; }
           .input-discs, .box-discs{ background:#ffd9d3; font-weight:700; font-size:18px; }
+          .progressi-dark{ padding:10px; border-radius:8px; max-width:100%; box-sizing:border-box; overflow-x:hidden; }
+          .chart-uniform-wrap{ width:100% !important; max-width:100% !important; box-sizing:border-box !important; }
+          .chart-uniform-wrap .card{ width:100% !important; max-width:100% !important; box-sizing:border-box !important; overflow-x:hidden !important; background:#ffffff !important; border-color:#ffffff !important; }
+          .chart-uniform-wrap .section-head{ flex-wrap:wrap !important; }
+          .chart-uniform-wrap .section-head > div{ min-width:0 !important; max-width:100% !important; flex-wrap:wrap !important; }
+          .chart-uniform-wrap select.input-sm-w{ min-width:0 !important; max-width:100% !important; }
+          .chart-uniform-wrap > div[style]{ height:260px !important; }
+          .chart-uniform-wrap{ --bg:#ffffff; --surface:#ffffff; --surface-2:#f2f2f2; --border-c:#dddddd; --text:#1a1a1a; --text-dim:#666666; }
+          .chart-uniform-wrap .pinned-tooltip-box, .chart-uniform-wrap .pinned-tooltip-box *{ color:#1a1a1a !important; }
           .input-kg, .input-rip, .input-rir, .input-discs, .input-note,
           .box-kg, .box-rip, .box-rir, .box-discs, .box-note{ min-height:44px; box-sizing:border-box; }
           .gt-main{ padding:10px; }
@@ -925,6 +1065,7 @@ export default function App() {
         <div className={"gt-nav-item" + (tab === "muscoli" ? " active" : "")} onClick={() => { setTab("muscoli"); setActiveMuscle(null); }}>Muscoli</div>
         <div className={"gt-nav-item" + (tab === "settimana" ? " active" : "")} onClick={() => setTab("settimana")}>Settimana</div>
         <div className={"gt-nav-item" + (tab === "serie" ? " active" : "")} onClick={() => setTab("serie")}>Serie Settimanali</div>
+        <div className={"gt-nav-item" + (tab === "forza" ? " active" : "")} onClick={() => setTab("forza")}>Analisi della Forza</div>
       </div>
 
       <div className={"gt-main" + (tab === "settimana" ? " gt-main-settimana" : "")}>
@@ -937,6 +1078,7 @@ export default function App() {
         )}
         {tab === "settimana" && <AllenamentiTab workouts={workouts} exercises={exercises} />}
         {tab === "serie" && <SerieSettimanaliTab workouts={workouts} exercises={exercises} />}
+        {tab === "forza" && <AnalisiForzaTab workouts={workouts} exercises={exercises} />}
       </div>
     </div>
   );
