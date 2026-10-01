@@ -904,6 +904,7 @@ export default function App() {
           .stats-row-head span{ text-align:left; white-space:normal; }
           .volume-badge{ width:78px; font-size:13px; }
           .input-kg, .box-kg{ font-size:22px; }
+          .group-ex-row span{ font-weight:700; }
           .input-kg, .input-rip, .input-rir, .input-discs, .input-note,
           .box-kg, .box-rip, .box-rir, .box-discs, .box-note{ min-height:44px; box-sizing:border-box; }
           .gt-main{ padding:10px; }
