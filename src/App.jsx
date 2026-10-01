@@ -718,16 +718,16 @@ export default function App() {
         .exercise-name{ font-size:16px; }
         .set-table{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
         .set-row{ display:grid; grid-template-columns:20px 1fr 1fr 0.8fr 1fr 1.2fr 24px; gap:5px; align-items:center; }
-        .set-row-head{ font-size:11px; color:var(--text-dim); text-transform:uppercase; }
+        .set-row-head{ font-size:11px; color:var(--text); text-transform:uppercase; }
         .set-idx{ font-size:13px; color:var(--text-dim); text-align:center; }
-        .input-kg{ background:#ff0000; color:#fff; border-color:#ff0000; font-weight:700; font-size:20px; }
+        .input-kg{ background:#8b1a1a; color:#fff; border-color:#8b1a1a; font-weight:700; font-size:20px; }
         .input-rip{ background:#aef000; color:#000; border-color:#aef000; font-weight:700; font-size:20px; }
         .input-rir{ background:#ffffff; color:#000; border-color:#ddd; font-weight:700; }
         .input-note{ background:#ffffff; color:#000; border-color:#ddd; }
-        .box-kg{ background:#ff0000; color:#fff; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; font-size:20px; }
-        .box-rip{ background:#aef000; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; font-size:20px; }
-        .box-rir{ background:#ffffff; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; border:1px solid #ddd; }
-        .box-note{ background:#ffffff; color:#000; text-align:left; padding:8px 6px; border-radius:6px; border:1px solid #ddd; overflow-x:auto; white-space:nowrap; }
+        .box-kg{ background:#8b1a1a; color:#fff; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; font-size:20px; display:flex; align-items:center; justify-content:center; min-height:40px; box-sizing:border-box; }
+        .box-rip{ background:#aef000; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; font-size:20px; display:flex; align-items:center; justify-content:center; min-height:40px; box-sizing:border-box; }
+        .box-rir{ background:#ffffff; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; border:1px solid #ddd; display:flex; align-items:center; justify-content:center; min-height:40px; box-sizing:border-box; }
+        .box-note{ background:#ffffff; color:#000; text-align:left; padding:8px 6px; border-radius:6px; border:1px solid #ddd; overflow-x:auto; white-space:nowrap; display:flex; align-items:center; min-height:40px; box-sizing:border-box; }
         .save-bar{ display:flex; align-items:center; justify-content:space-between; border-top:1px solid var(--border-c); padding-top:14px; }
         .plate-val{ font-weight:700; font-size:26px; color:var(--accent); }
         .plate-label{ font-size:11px; color:var(--text-dim); text-transform:uppercase; }
@@ -778,6 +778,10 @@ export default function App() {
         .settimana-popup-set-titles .settimana-popup-mini-box{ background:transparent !important; color:#fff !important; font-size:12px; }
         .nuovo-allenamento-dark{ background:#000; border-radius:12px; padding:16px; }
 
+        @media (min-width: 641px){
+          .gt-main-settimana{ max-width:980px; }
+        }
+
         @media (max-width: 640px){
           .gt-main{ padding:10px; }
           .set-row{ grid-template-columns:18px 56px 50px 44px 50px 100px 22px; min-width:420px; }
@@ -796,7 +800,7 @@ export default function App() {
         <div className={"gt-nav-item" + (tab === "settimana" ? " active" : "")} onClick={() => setTab("settimana")}>Settimana</div>
       </div>
 
-      <div className="gt-main">
+      <div className={"gt-main" + (tab === "settimana" ? " gt-main-settimana" : "")}>
         {tab === "muscoli" && !activeMuscle && <MuscoliTab onSelectMuscle={setActiveMuscle} />}
         {tab === "muscoli" && activeMuscle && (
           <div className="col" style={{ gap: 12 }}>
