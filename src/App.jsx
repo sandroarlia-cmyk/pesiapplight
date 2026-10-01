@@ -903,8 +903,11 @@ export default function App() {
           .stats-row-head{ font-size:11px; }
           .stats-row-head span{ text-align:left; white-space:normal; }
           .volume-badge{ width:78px; font-size:13px; }
+          .input-kg, .box-kg{ font-size:22px; }
+          .input-kg, .input-rip, .input-rir, .input-discs, .input-note,
+          .box-kg, .box-rip, .box-rir, .box-discs, .box-note{ min-height:44px; box-sizing:border-box; }
           .gt-main{ padding:10px; }
-          .set-row{ grid-template-columns:18px 80px 50px 44px 70px 50px 100px 22px; min-width:490px; }
+          .set-row{ grid-template-columns:18px 130px 50px 44px 70px 50px 200px 22px; min-width:640px; }
           .set-table{ overflow-x:auto; }
           .promemoria-grid{ grid-template-columns:repeat(7, 118px); overflow-x:auto; padding-bottom:6px; }
           .progressi-dark{ padding:10px; border-radius:8px; max-width:100%; box-sizing:border-box; overflow-x:hidden; }
