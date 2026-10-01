@@ -398,15 +398,17 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
                       <div className="last-time-block">
                         <div className="hint">Volta precedente ({formatDateShort(secondLast.date)}):</div>
                         <div className="set-table" style={{ marginTop: 6 }}>
-                          <div className="set-row set-row-head" style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1fr 1.3fr" }}><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Dischi Kg</span><span>Note</span></div>
+                          <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Dischi Kg</span><span>Min.</span><span>Note</span><span></span></div>
                           {secondLast.sets.map((s, i) => (
-                            <div className="set-row" key={i} style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1fr 1.3fr" }}>
+                            <div className="set-row" key={i}>
                               <span className="set-idx">{i + 1}</span>
                               <span className="box-kg">{s.weight || 0}</span>
                               <span className="box-rip">{s.reps || 0}</span>
                               <span className="box-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</span>
                               <span className="box-discs">{s.discs || ""}</span>
+                              <span className="box-rir">{s.recupero || ""}</span>
                               <span className="box-note">{s.notes || ""}</span>
+                              <span></span>
                             </div>
                           ))}
                         </div>
@@ -416,15 +418,17 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
                       <div className="last-time-block">
                         <div className="hint">Ultima volta ({formatDateShort(last.date)}):</div>
                         <div className="set-table" style={{ marginTop: 6 }}>
-                          <div className="set-row set-row-head" style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1fr 1.3fr" }}><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Dischi Kg</span><span>Note</span></div>
+                          <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Dischi Kg</span><span>Min.</span><span>Note</span><span></span></div>
                           {last.sets.map((s, i) => (
-                            <div className="set-row" key={i} style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1fr 1.3fr" }}>
+                            <div className="set-row" key={i}>
                               <span className="set-idx">{i + 1}</span>
                               <span className="box-kg">{s.weight || 0}</span>
                               <span className="box-rip">{s.reps || 0}</span>
                               <span className="box-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</span>
                               <span className="box-discs">{s.discs || ""}</span>
+                              <span className="box-rir">{s.recupero || ""}</span>
                               <span className="box-note">{s.notes || ""}</span>
+                              <span></span>
                             </div>
                           ))}
                         </div>
@@ -836,8 +840,8 @@ export default function App() {
         .chevron.open{ transform:rotate(90deg); }
         .history-date-card{ padding:10px 14px; border-top:1px solid var(--border-c); }
         .history-date-head{ cursor:pointer; font-weight:700; font-size:14px; }
-        .box-date{ background:#ececea; color:#1a1a1a; font-weight:700; padding:8px 12px; border-radius:6px; border:1px solid var(--border-c); }
-        .box-serie{ background:#3E7191; color:#fff; font-weight:700; padding:8px 12px; border-radius:6px; }
+        .box-date{ background:#ececea; color:#1a1a1a; font-weight:700; padding:8px 4px; border-radius:6px; border:1px solid var(--border-c); width:84px; text-align:center; box-sizing:border-box; }
+        .box-serie{ background:#3E7191; color:#fff; font-weight:700; padding:8px 4px; border-radius:6px; width:84px; text-align:center; box-sizing:border-box; }
 
         /* Settimana — identica all'app principale */
         .promemoria-title{ font-size:22px; text-align:center; letter-spacing:0.5px; }
