@@ -880,11 +880,11 @@ export default function App() {
         }
         .statistiche-dark .btn-primary{ color:#0f1310; }
         .stats-table{ display:flex; flex-direction:column; gap:4px; }
-        .stats-row{ display:grid; grid-template-columns:2fr 1fr 1fr 1fr; padding:9px 4px; font-size:14px; border-bottom:1px solid var(--border-c); color:var(--text); }
+        .stats-row{ display:grid; grid-template-columns:1.6fr 0.7fr 0.7fr 1.5fr; gap:4px; padding:9px 4px; font-size:17px; border-bottom:1px solid var(--border-c); color:var(--text); }
         .stats-row span{ text-align:left; }
-        .stats-row-head{ color:var(--text-dim); font-size:11px; text-transform:uppercase; border-bottom:1px solid var(--border-c); }
+        .stats-row-head{ color:var(--text-dim); font-size:14px; text-transform:uppercase; border-bottom:1px solid var(--border-c); }
         .week-nav{ display:flex; align-items:center; gap:14px; margin-bottom:8px; font-weight:700; color:var(--text); font-size:19px; }
-        .volume-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:52px; box-sizing:border-box; background:#1f6b3a; color:#ffffff; font-weight:700; padding:3px 10px; border-radius:6px; }
+        .volume-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:52px; width:fit-content; max-width:100%; box-sizing:border-box; background:#1f6b3a; color:#ffffff; font-weight:700; padding:3px 8px; border-radius:6px; white-space:nowrap; }
         .mode-btn-row{ display:flex; gap:6px; justify-content:flex-start; flex-wrap:wrap; margin-bottom:10px; }
         .mode-btn-row .btn{ font-size:17px; padding:8px 16px; }
 
@@ -894,6 +894,8 @@ export default function App() {
         }
 
         @media (max-width: 640px){
+          .mode-btn-row{ flex-wrap:nowrap; justify-content:flex-start; }
+          .mode-btn-row .btn{ padding:7px 10px; font-size:15px; }
           .gt-main{ padding:10px; }
           .set-row{ grid-template-columns:18px 80px 50px 44px 70px 50px 100px 22px; min-width:490px; }
           .set-table{ overflow-x:auto; }
