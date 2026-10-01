@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Dumbbell, Plus, Trash2, Search, X, ChevronRight, ChevronLeft, Save } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { loadGymData, saveWorkoutDoc, deleteWorkoutDoc, saveConfigDoc } from "./firebaseClient";
 
 // ---------- Dati di base (identici all'app principale) ----------
@@ -84,6 +85,23 @@ function mergeRequiredExercises(list) {
   });
   return result;
 }
+function weeklyMuscleStats(workouts, exercises, weekStartISO, weekEndISO) {
+  const stats = {}; MUSCLE_GROUPS.forEach((m) => (stats[m] = { sets: 0, reps: 0, volume: 0 }));
+  workouts.filter((w) => w.date >= weekStartISO && w.date <= weekEndISO).forEach((w) => {
+    w.exercises.forEach((it) => {
+      const ex = exercises.find((e) => e.id === it.exerciseId);
+      if (!ex) return;
+      const m = stats[ex.muscle] || (stats[ex.muscle] = { sets: 0, reps: 0, volume: 0 });
+      it.sets.forEach((s) => {
+        m.sets += 1;
+        m.reps += Number(s.reps) || 0;
+        m.volume += setVolume(s);
+      });
+    });
+  });
+  return stats;
+}
+
 function dedupeExercisesAndRemapWorkouts(exercisesList, workoutsList) {
   const canonicalByKey = new Map();
   const idRemap = new Map();
@@ -148,6 +166,25 @@ function DeleteButton({ onConfirm, small }) {
   );
 }
 
+function PinnedTooltip({ active, payload, label, labelFormatter, formatter, valueColor }) {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div className="pinned-tooltip-box" style={{ background: "var(--surface-2)", border: "1px solid var(--border-c)", borderRadius: 8, padding: "18px 22px", minWidth: 200 }}>
+      <div style={{ color: "var(--text-dim)", fontSize: 15, marginBottom: 8 }}>
+        {labelFormatter ? labelFormatter(label, payload) : label}
+      </div>
+      {payload.map((entry, i) => {
+        const [val, name] = formatter ? formatter(entry.value, entry.name, entry) : [entry.value, entry.name];
+        return (
+          <div key={i} style={{ color: valueColor || "#ffffff", fontWeight: 700, fontSize: 20, marginBottom: 3 }}>
+            {name}: {val}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Section({ title, right, children }) {
   return (
     <div className="card">
@@ -205,17 +242,17 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
 
   function addExerciseToSession(ex) {
     if (items.some((it) => it.exerciseId === ex.id)) return;
-    setItems([...items, { id: uid(), exerciseId: ex.id, sets: [{ weight: "", reps: "", rir: "", recupero: "", notes: "" }] }]);
+    setItems([...items, { id: uid(), exerciseId: ex.id, sets: [{ weight: "", reps: "", rir: "", discs: "", recupero: "", notes: "" }] }]);
   }
   function addCustomExercise(text) {
     if (!text.trim()) return;
     const newEx = { id: uid(), name: text.trim(), muscle, secondary: "", equipment: "", favorite: false };
     setExercises([...exercises, newEx]);
-    setItems([...items, { id: uid(), exerciseId: newEx.id, sets: [{ weight: "", reps: "", rir: "", recupero: "", notes: "" }] }]);
+    setItems([...items, { id: uid(), exerciseId: newEx.id, sets: [{ weight: "", reps: "", rir: "", discs: "", recupero: "", notes: "" }] }]);
   }
   function removeExercise(itemId) { setItems(items.filter((it) => it.id !== itemId)); }
   function addSet(itemId) {
-    setItems(items.map((it) => (it.id === itemId && it.sets.length < 10 ? { ...it, sets: [...it.sets, { weight: "", reps: "", rir: "", recupero: "", notes: "" }] } : it)));
+    setItems(items.map((it) => (it.id === itemId && it.sets.length < 10 ? { ...it, sets: [...it.sets, { weight: "", reps: "", rir: "", discs: "", recupero: "", notes: "" }] } : it)));
   }
   function updateSet(itemId, idx, field, value) {
     setItems(items.map((it) => (it.id === itemId ? { ...it, sets: it.sets.map((s, i) => (i === idx ? { ...s, [field]: value } : s)) } : it)));
@@ -251,7 +288,7 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
   }
   function addSetToRow(workoutId, exId) {
     setWorkouts(workouts.map((w) => w.id !== workoutId ? w : {
-      ...w, exercises: w.exercises.map((it) => (it.exerciseId !== exId || it.sets.length >= 10) ? it : { ...it, sets: [...it.sets, { weight: "", reps: "", rir: "", recupero: "", notes: "" }] })
+      ...w, exercises: w.exercises.map((it) => (it.exerciseId !== exId || it.sets.length >= 10) ? it : { ...it, sets: [...it.sets, { weight: "", reps: "", rir: "", discs: "", recupero: "", notes: "" }] })
     }));
   }
   function removeSetFromRow(workoutId, exId, idx) {
@@ -288,7 +325,7 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
               </div>
             )}
             <div className="set-table">
-              <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Min.</span><span>Note</span>{isEditing && <span></span>}</div>
+              <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Dischi Kg</span><span>Min.</span><span>Note</span>{isEditing && <span></span>}</div>
               {r.item.sets.map((s, idx) => (
                 <div className="set-row" key={idx}>
                   <span className="set-idx">{idx + 1}</span>
@@ -297,6 +334,7 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
                       <input className="input input-kg" type="number" value={s.weight} onChange={(e) => updateSetField(r.workoutId, exId, idx, "weight", e.target.value)} />
                       <input className="input input-rip" type="number" value={s.reps} onChange={(e) => updateSetField(r.workoutId, exId, idx, "reps", e.target.value)} />
                       <input className="input input-rir" type="number" value={s.rir} onChange={(e) => updateSetField(r.workoutId, exId, idx, "rir", e.target.value)} />
+                      <input className="input input-discs" type="number" step="0.001" value={s.discs} onChange={(e) => updateSetField(r.workoutId, exId, idx, "discs", e.target.value)} />
                       <select className="input input-rir" value={s.recupero || ""} onChange={(e) => updateSetField(r.workoutId, exId, idx, "recupero", e.target.value)}>
                         <option value="">—</option>
                         {RECUPERO_OPTIONS.map((rc) => <option key={rc} value={rc}>{rc}</option>)}
@@ -309,6 +347,7 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
                       <span className="box-kg">{s.weight || 0}</span>
                       <span className="box-rip">{s.reps || 0}</span>
                       <span className="box-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</span>
+                      <span className="box-discs">{s.discs || ""}</span>
                       <span className="box-rir">{s.recupero || ""}</span>
                       <span className="box-note">{s.notes || ""}</span>
                     </>
@@ -369,13 +408,14 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
                       <div className="last-time-block">
                         <div className="hint">Volta precedente ({formatDateShort(secondLast.date)}):</div>
                         <div className="set-table" style={{ marginTop: 6 }}>
-                          <div className="set-row set-row-head" style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1.3fr" }}><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Note</span></div>
+                          <div className="set-row set-row-head" style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1fr 1.3fr" }}><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Dischi Kg</span><span>Note</span></div>
                           {secondLast.sets.map((s, i) => (
-                            <div className="set-row" key={i} style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1.3fr" }}>
+                            <div className="set-row" key={i} style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1fr 1.3fr" }}>
                               <span className="set-idx">{i + 1}</span>
                               <span className="box-kg">{s.weight || 0}</span>
                               <span className="box-rip">{s.reps || 0}</span>
                               <span className="box-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</span>
+                              <span className="box-discs">{s.discs || ""}</span>
                               <span className="box-note">{s.notes || ""}</span>
                             </div>
                           ))}
@@ -386,13 +426,14 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
                       <div className="last-time-block">
                         <div className="hint">Ultima volta ({formatDateShort(last.date)}):</div>
                         <div className="set-table" style={{ marginTop: 6 }}>
-                          <div className="set-row set-row-head" style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1.3fr" }}><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Note</span></div>
+                          <div className="set-row set-row-head" style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1fr 1.3fr" }}><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Dischi Kg</span><span>Note</span></div>
                           {last.sets.map((s, i) => (
-                            <div className="set-row" key={i} style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1.3fr" }}>
+                            <div className="set-row" key={i} style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1fr 1.3fr" }}>
                               <span className="set-idx">{i + 1}</span>
                               <span className="box-kg">{s.weight || 0}</span>
                               <span className="box-rip">{s.reps || 0}</span>
                               <span className="box-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</span>
+                              <span className="box-discs">{s.discs || ""}</span>
                               <span className="box-note">{s.notes || ""}</span>
                             </div>
                           ))}
@@ -402,13 +443,14 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
 
                     {item.sets.length > 0 && (
                       <div className="set-table">
-                        <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Min.</span><span>Note</span><span></span></div>
+                        <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Dischi Kg</span><span>Min.</span><span>Note</span><span></span></div>
                         {item.sets.map((s, idx) => (
                           <div className="set-row" key={idx}>
                             <span className="set-idx">{idx + 1}</span>
                             <input className="input input-kg" type="number" value={s.weight} onChange={(e) => updateSet(item.id, idx, "weight", e.target.value)} />
                             <input className="input input-rip" type="number" value={s.reps} onChange={(e) => updateSet(item.id, idx, "reps", e.target.value)} />
                             <input className="input input-rir" type="number" value={s.rir} onChange={(e) => updateSet(item.id, idx, "rir", e.target.value)} />
+                            <input className="input input-discs" type="number" step="0.001" value={s.discs} onChange={(e) => updateSet(item.id, idx, "discs", e.target.value)} />
                             <select className="input input-rir" value={s.recupero} onChange={(e) => updateSet(item.id, idx, "recupero", e.target.value)}>
                               <option value="">—</option>
                               {RECUPERO_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -499,6 +541,78 @@ function MuscoliTab({ onSelectMuscle }) {
         {MUSCLE_GROUPS.map((m) => (
           <div key={m} className="muscoli-tile" style={{ background: MUSCLE_DARK_COLORS[m] }} onClick={() => onSelectMuscle(m)}>{m.toUpperCase()}</div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Serie Settimanali: unico modulo, identico all'app principale ----------
+
+function SerieSettimanaliTab({ workouts, exercises }) {
+  const [serieGruppo, setSerieGruppo] = useState(MUSCLE_GROUPS[0]);
+  const [pinnedSerieSett, setPinnedSerieSett] = useState(null);
+
+  function togglePinned(current, setCurrent, key, x, y) {
+    setCurrent((prev) => (prev && prev.key === key ? null : { key, x, y }));
+  }
+
+  useEffect(() => {
+    function handleOutsideClick(e) {
+      if (!e.target.closest(".chart-relative-wrap")) setPinnedSerieSett(null);
+    }
+    document.addEventListener("click", handleOutsideClick, true);
+    return () => document.removeEventListener("click", handleOutsideClick, true);
+  }, []);
+
+  const weeklySeriesData = useMemo(() => {
+    const weeks = [];
+    for (let i = 9; i >= 0; i--) {
+      const ws = addDays(getMonday(todayISO()), -7 * i);
+      const we = addDays(ws, 6);
+      const stats = weeklyMuscleStats(workouts, exercises, isoOf(ws), isoOf(we));
+      const s = stats[serieGruppo] || { sets: 0 };
+      weeks.push({
+        settimana: formatDateShort(isoOf(ws)),
+        periodo: `${formatDateShort(isoOf(ws))} – ${formatDateShort(isoOf(we))}`,
+        serie: s.sets
+      });
+    }
+    return weeks;
+  }, [workouts, exercises, serieGruppo]);
+
+  return (
+    <div className="progressi-dark">
+      <div className="chart-uniform-wrap">
+        <Section title="TOTALE SERIE SETTIMANALI PER MUSCOLO" right={
+          <select className="input input-sm-w" value={serieGruppo} onChange={(e) => setSerieGruppo(e.target.value)}>
+            {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        }>
+          <div className="chart-relative-wrap" style={{ height: 260 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklySeriesData}
+                onClick={(state) => { if (state && state.activeLabel) togglePinned(pinnedSerieSett, setPinnedSerieSett, state.activeLabel, state.chartX, state.chartY); }}>
+                <CartesianGrid stroke="var(--border-c)" strokeDasharray="3 3" />
+                <XAxis dataKey="settimana" stroke="var(--text-dim)" fontSize={11} />
+                <YAxis stroke="var(--text-dim)" fontSize={11} />
+                <Tooltip
+                  active={pinnedSerieSett ? true : undefined}
+                  payload={pinnedSerieSett ? (() => {
+                    const p = weeklySeriesData.find((d) => d.settimana === pinnedSerieSett.key);
+                    return p ? [{ name: "Totale serie", value: p.serie, dataKey: "serie", payload: p, color: "#aef000" }] : undefined;
+                  })() : undefined}
+                  label={pinnedSerieSett ? pinnedSerieSett.key : undefined}
+                  coordinate={pinnedSerieSett ? { x: pinnedSerieSett.x, y: pinnedSerieSett.y } : undefined}
+                  wrapperStyle={{ pointerEvents: "auto" }}
+                  content={(props) => <PinnedTooltip {...props}
+                    labelFormatter={(label, payload) => (payload && payload[0] ? payload[0].payload.periodo : label)}
+                    formatter={(value) => [value, "Totale serie"]} />}
+                />
+                <Bar dataKey="serie" fill="#aef000" name="Totale serie" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Section>
       </div>
     </div>
   );
@@ -717,17 +831,19 @@ export default function App() {
         .exercise-block{ border:1px solid var(--border-c); border-radius:8px; padding:12px; background:var(--surface-2); }
         .exercise-name{ font-size:16px; }
         .set-table{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
-        .set-row{ display:grid; grid-template-columns:20px 1fr 1fr 0.8fr 1fr 1.2fr 24px; gap:5px; align-items:center; }
+        .set-row{ display:grid; grid-template-columns:20px 1fr 1fr 0.8fr 1fr 1fr 1.2fr 24px; gap:5px; align-items:center; }
         .set-row-head{ font-size:11px; color:var(--text); text-transform:uppercase; }
         .set-idx{ font-size:13px; color:var(--text-dim); text-align:center; }
         .input-kg{ background:#8b1a1a; color:#fff; border-color:#8b1a1a; font-weight:700; font-size:20px; }
         .input-rip{ background:#aef000; color:#000; border-color:#aef000; font-weight:700; font-size:20px; }
         .input-rir{ background:#ffffff; color:#000; border-color:#ddd; font-weight:700; }
         .input-note{ background:#ffffff; color:#000; border-color:#ddd; }
+        .input-discs{ background:#ffffff; color:#000; border-color:#ddd; font-weight:700; }
         .box-kg{ background:#8b1a1a; color:#fff; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; font-size:20px; display:flex; align-items:center; justify-content:center; min-height:40px; box-sizing:border-box; }
         .box-rip{ background:#aef000; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; font-size:20px; display:flex; align-items:center; justify-content:center; min-height:40px; box-sizing:border-box; }
         .box-rir{ background:#ffffff; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; border:1px solid #ddd; display:flex; align-items:center; justify-content:center; min-height:40px; box-sizing:border-box; }
         .box-note{ background:#ffffff; color:#000; text-align:left; padding:8px 6px; border-radius:6px; border:1px solid #ddd; overflow-x:auto; white-space:nowrap; display:flex; align-items:center; min-height:40px; box-sizing:border-box; }
+        .box-discs{ background:#ffffff; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; border:1px solid #ddd; display:flex; align-items:center; justify-content:center; min-height:40px; box-sizing:border-box; }
         .save-bar{ display:flex; align-items:center; justify-content:space-between; border-top:1px solid var(--border-c); padding-top:14px; }
         .plate-val{ font-weight:700; font-size:26px; color:var(--accent); }
         .plate-label{ font-size:11px; color:var(--text-dim); text-transform:uppercase; }
@@ -778,15 +894,33 @@ export default function App() {
         .settimana-popup-set-titles .settimana-popup-mini-box{ background:transparent !important; color:#fff !important; font-size:12px; }
         .nuovo-allenamento-dark{ background:#000; border-radius:12px; padding:16px; }
 
+        /* Serie Settimanali — identica all'app principale */
+        .progressi-dark{
+          --bg:#161915; --surface:#1c1f1a; --surface-2:#242821; --border-c:#38402f;
+          --text:#e8ece5; --text-dim:#9fb89a; --accent:#7be08a; --accent-dim:#2c3126;
+          background:var(--bg); border-radius:12px; padding:16px;
+        }
+        .chart-relative-wrap{ position:relative; }
+        .input-sm-w{ width:auto; max-width:320px; }
+
         @media (min-width: 641px){
           .gt-main-settimana{ max-width:980px; }
         }
 
         @media (max-width: 640px){
           .gt-main{ padding:10px; }
-          .set-row{ grid-template-columns:18px 56px 50px 44px 50px 100px 22px; min-width:420px; }
+          .set-row{ grid-template-columns:18px 80px 50px 44px 70px 50px 100px 22px; min-width:490px; }
           .set-table{ overflow-x:auto; }
           .promemoria-grid{ grid-template-columns:repeat(7, 118px); overflow-x:auto; padding-bottom:6px; }
+          .progressi-dark{ padding:10px; border-radius:8px; max-width:100%; box-sizing:border-box; overflow-x:hidden; }
+          .chart-uniform-wrap{ width:100% !important; max-width:100% !important; box-sizing:border-box !important; }
+          .chart-uniform-wrap .card{ width:100% !important; max-width:100% !important; box-sizing:border-box !important; overflow-x:hidden !important; background:#ffffff !important; border-color:#ffffff !important; }
+          .chart-uniform-wrap .section-head{ flex-wrap:wrap !important; }
+          .chart-uniform-wrap .section-head > div{ min-width:0 !important; max-width:100% !important; flex-wrap:wrap !important; }
+          .chart-uniform-wrap select.input-sm-w{ min-width:0 !important; max-width:100% !important; }
+          .chart-uniform-wrap > div[style]{ height:260px !important; }
+          .chart-uniform-wrap{ --bg:#ffffff; --surface:#ffffff; --surface-2:#f2f2f2; --border-c:#dddddd; --text:#1a1a1a; --text-dim:#666666; }
+          .chart-uniform-wrap .pinned-tooltip-box, .chart-uniform-wrap .pinned-tooltip-box *{ color:#1a1a1a !important; }
         }
       `}</style>
 
@@ -798,6 +932,7 @@ export default function App() {
       <div className="gt-nav">
         <div className={"gt-nav-item" + (tab === "muscoli" ? " active" : "")} onClick={() => { setTab("muscoli"); setActiveMuscle(null); }}>Muscoli</div>
         <div className={"gt-nav-item" + (tab === "settimana" ? " active" : "")} onClick={() => setTab("settimana")}>Settimana</div>
+        <div className={"gt-nav-item" + (tab === "serie" ? " active" : "")} onClick={() => setTab("serie")}>Serie Settimanali</div>
       </div>
 
       <div className={"gt-main" + (tab === "settimana" ? " gt-main-settimana" : "")}>
@@ -809,6 +944,7 @@ export default function App() {
           </div>
         )}
         {tab === "settimana" && <AllenamentiTab workouts={workouts} exercises={exercises} />}
+        {tab === "serie" && <SerieSettimanaliTab workouts={workouts} exercises={exercises} />}
       </div>
     </div>
   );
