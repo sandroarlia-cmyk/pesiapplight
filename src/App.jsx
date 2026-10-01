@@ -884,7 +884,7 @@ export default function App() {
         .stats-row span{ text-align:left; }
         .stats-row-head{ color:var(--text-dim); font-size:14px; text-transform:uppercase; border-bottom:1px solid var(--border-c); }
         .week-nav{ display:flex; align-items:center; gap:14px; margin-bottom:8px; font-weight:700; color:var(--text); font-size:19px; }
-        .volume-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:52px; width:fit-content; max-width:100%; box-sizing:border-box; background:#1f6b3a; color:#ffffff; font-weight:700; padding:3px 8px; border-radius:6px; white-space:nowrap; }
+        .volume-badge{ display:inline-flex; align-items:center; justify-content:center; width:92px; max-width:100%; box-sizing:border-box; background:#1f6b3a; color:#ffffff; font-weight:700; padding:3px 6px; border-radius:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .mode-btn-row{ display:flex; gap:6px; justify-content:flex-start; flex-wrap:wrap; margin-bottom:10px; }
         .mode-btn-row .btn{ font-size:17px; padding:8px 16px; }
 
@@ -896,6 +896,9 @@ export default function App() {
         @media (max-width: 640px){
           .mode-btn-row{ flex-wrap:nowrap; justify-content:flex-start; }
           .mode-btn-row .btn{ padding:7px 10px; font-size:15px; }
+          .stats-row-head{ font-size:11px; }
+          .stats-row-head span{ text-align:left; white-space:normal; }
+          .volume-badge{ width:78px; font-size:13px; }
           .gt-main{ padding:10px; }
           .set-row{ grid-template-columns:18px 80px 50px 44px 70px 50px 100px 22px; min-width:490px; }
           .set-table{ overflow-x:auto; }
