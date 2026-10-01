@@ -556,15 +556,14 @@ function SerieSettimanaliTab({ workouts, exercises }) {
 
   return (
     <div className="statistiche-dark">
-      <Section title="Statistiche" right={
-        <div style={{ display: "flex", gap: 6 }}>
+      <Section title="Statistiche">
+        <div className="mode-btn-row">
           {["settimana", "mese", "anno"].map((m) => (
             <button key={m} className={"btn " + (mode === m ? "btn-primary" : "btn-ghost")} onClick={() => setMode(m)}>
               {m.charAt(0).toUpperCase() + m.slice(1)}
             </button>
           ))}
         </div>
-      }>
         {mode === "settimana" && (
           <div className="week-nav">
             <button className="btn-icon" onClick={() => setWeekStart(addDays(weekStart, -7))}><ChevronLeft size={22} /></button>
@@ -581,7 +580,7 @@ function SerieSettimanaliTab({ workouts, exercises }) {
 
         <div className="stats-table" style={{ marginTop: 14 }}>
           <div className="stats-row stats-row-head">
-            <span>Gruppo muscolare</span><span>Serie</span><span>Ripetizioni</span><span>Volume (kg)</span>
+            <span>Gruppo muscolare</span><span>Serie</span><span>RIP</span><span>Volume (kg)</span>
           </div>
           {activeRows.length === 0 && <p className="muted" style={{ padding: "10px 0" }}>Nessun dato per questo periodo.</p>}
           {activeRows.map(([m, v]) => (
@@ -790,7 +789,7 @@ export default function App() {
         .gt-main{ padding:16px; max-width:640px; margin:0 auto; }
         .card{ background:var(--surface); border:1px solid var(--border-c); border-radius:10px; padding:16px; }
         .section-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-        .section-title{ font-size:18px; margin:0; font-weight:700; }
+        .section-title{ font-size:18px; margin:0; font-weight:700; color:var(--text); }
         .label{ display:block; font-size:12px; color:var(--text-dim); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.03em; }
         .hint{ color:var(--text-dim); font-size:13px; }
         .muted{ color:var(--text-dim); font-size:14px; }
@@ -882,9 +881,12 @@ export default function App() {
         .statistiche-dark .btn-primary{ color:#0f1310; }
         .stats-table{ display:flex; flex-direction:column; gap:4px; }
         .stats-row{ display:grid; grid-template-columns:2fr 1fr 1fr 1fr; padding:9px 4px; font-size:14px; border-bottom:1px solid var(--border-c); color:var(--text); }
+        .stats-row span{ text-align:left; }
         .stats-row-head{ color:var(--text-dim); font-size:11px; text-transform:uppercase; border-bottom:1px solid var(--border-c); }
-        .week-nav{ display:flex; align-items:center; gap:14px; margin-bottom:8px; font-weight:700; }
-        .volume-badge{ display:inline-block; background:#1f6b3a; color:#ffffff; font-weight:700; padding:3px 10px; border-radius:6px; }
+        .week-nav{ display:flex; align-items:center; gap:14px; margin-bottom:8px; font-weight:700; color:var(--text); font-size:19px; }
+        .volume-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:52px; box-sizing:border-box; background:#1f6b3a; color:#ffffff; font-weight:700; padding:3px 10px; border-radius:6px; }
+        .mode-btn-row{ display:flex; gap:6px; justify-content:flex-start; flex-wrap:wrap; margin-bottom:10px; }
+        .mode-btn-row .btn{ font-size:17px; padding:8px 16px; }
 
 
         @media (min-width: 641px){
