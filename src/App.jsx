@@ -891,6 +891,29 @@ export default function App() {
     })();
   }, [workouts, loaded, loadFailed]);
 
+  const TAB_ORDER = ["muscoli", "settimana", "serie", "forza"];
+  const touchStartRef = React.useRef(null);
+  const SWIPE_SKIP_SELECTOR = ".set-table, .promemoria-grid, .mode-btn-row, .gt-nav, input, select, button, textarea, .history-cards-grid, .group-ex-list";
+
+  function handleTouchStart(e) {
+    if (e.target.closest(SWIPE_SKIP_SELECTOR)) { touchStartRef.current = null; return; }
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  }
+  function handleTouchEnd(e) {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const idx = TAB_ORDER.indexOf(tab);
+    if (idx === -1) return;
+    if (dx < 0 && idx < TAB_ORDER.length - 1) setTab(TAB_ORDER[idx + 1]);
+    else if (dx > 0 && idx > 0) setTab(TAB_ORDER[idx - 1]);
+  }
+
   if (!loaded) return <div className="loading-screen">Caricamento...</div>;
   if (loadFailed) return <div className="loading-screen">Impossibile connettersi al database.</div>;
 
@@ -1069,7 +1092,7 @@ export default function App() {
         <div className={"gt-nav-item" + (tab === "forza" ? " active" : "")} onClick={() => setTab("forza")}>Analisi della Forza</div>
       </div>
 
-      <div className={"gt-main" + (tab === "settimana" ? " gt-main-settimana" : "")}>
+      <div className={"gt-main" + (tab === "settimana" ? " gt-main-settimana" : "")} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         {tab === "muscoli" && !activeMuscle && <MuscoliTab onSelectMuscle={setActiveMuscle} />}
         {tab === "muscoli" && activeMuscle && (
           <div className="col" style={{ gap: 12 }}>
