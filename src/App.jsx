@@ -169,6 +169,34 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
   const [openExId, setOpenExId] = useState(null);
   const [openDateKey, setOpenDateKey] = useState(null);
   const [editingKey, setEditingKey] = useState(null);
+  const [openDatesFor, setOpenDatesFor] = useState(() => new Set());
+
+  function toggleDatesFor(exId) {
+    setOpenDatesFor((prev) => {
+      const next = new Set(prev);
+      if (next.has(exId)) next.delete(exId); else next.add(exId);
+      return next;
+    });
+  }
+  function lastExecution(exerciseId) {
+    const past = workouts.filter((w) => w.date <= date && w.exercises.some((it) => it.exerciseId === exerciseId)).sort((a, b) => (a.date < b.date ? 1 : -1));
+    if (!past.length) return null;
+    const it = past[0].exercises.find((it) => it.exerciseId === exerciseId);
+    if (!it || !it.sets.length) return null;
+    return { date: past[0].date, sets: it.sets };
+  }
+  function secondLastExecution(exerciseId) {
+    const past = workouts.filter((w) => w.date <= date && w.exercises.some((it) => it.exerciseId === exerciseId)).sort((a, b) => (a.date < b.date ? 1 : -1));
+    if (past.length < 2) return null;
+    const it = past[1].exercises.find((it) => it.exerciseId === exerciseId);
+    if (!it || !it.sets.length) return null;
+    return { date: past[1].date, sets: it.sets };
+  }
+  function rowsForExercise(exId) {
+    return workouts.filter((w) => w.exercises.some((it) => it.exerciseId === exId))
+      .map((w) => ({ workoutId: w.id, date: w.date, item: w.exercises.find((it) => it.exerciseId === exId) }))
+      .sort((a, b) => (a.date > b.date ? -1 : 1));
+  }
 
   const groupList = orderedExerciseList(exercises, muscle);
   const addedList = groupList.filter((ex) => items.some((it) => it.exerciseId === ex.id));
@@ -236,6 +264,69 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
     setWorkouts(updated);
   }
 
+  function renderDateDetail(exId, r) {
+    const key = exId + "-" + r.workoutId;
+    const isOpen = openDateKey === key;
+    const isEditing = editingKey === key;
+    return (
+      <div key={key} className="history-date-card">
+        <div className="history-date-head row" style={{ justifyContent: "space-between" }} onClick={() => setOpenDateKey(isOpen ? null : key)}>
+          <span>{formatDateShort(r.date)} — {r.item.sets.length} serie</span>
+          {isOpen && (
+            <div className="row" style={{ gap: 6 }} onClick={(e) => e.stopPropagation()}>
+              <button className="btn btn-ghost" onClick={() => setEditingKey(isEditing ? null : key)}>{isEditing ? "Fatto" : "Modifica"}</button>
+              <DeleteButton small onConfirm={() => deleteEntireEntry(r.workoutId, exId)} />
+            </div>
+          )}
+        </div>
+        {isOpen && (
+          <div className="col" style={{ gap: 8, marginTop: 8 }}>
+            {isEditing && (
+              <div>
+                <label className="label">Data</label>
+                <input type="date" className="input" value={r.date} onChange={(e) => updateWorkoutDate(r.workoutId, e.target.value)} />
+              </div>
+            )}
+            <div className="set-table">
+              <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Min.</span><span>Note</span>{isEditing && <span></span>}</div>
+              {r.item.sets.map((s, idx) => (
+                <div className="set-row" key={idx}>
+                  <span className="set-idx">{idx + 1}</span>
+                  {isEditing ? (
+                    <>
+                      <input className="input input-kg" type="number" value={s.weight} onChange={(e) => updateSetField(r.workoutId, exId, idx, "weight", e.target.value)} />
+                      <input className="input input-rip" type="number" value={s.reps} onChange={(e) => updateSetField(r.workoutId, exId, idx, "reps", e.target.value)} />
+                      <input className="input input-rir" type="number" value={s.rir} onChange={(e) => updateSetField(r.workoutId, exId, idx, "rir", e.target.value)} />
+                      <select className="input input-rir" value={s.recupero || ""} onChange={(e) => updateSetField(r.workoutId, exId, idx, "recupero", e.target.value)}>
+                        <option value="">—</option>
+                        {RECUPERO_OPTIONS.map((rc) => <option key={rc} value={rc}>{rc}</option>)}
+                      </select>
+                      <input className="input input-note" value={s.notes} onChange={(e) => updateSetField(r.workoutId, exId, idx, "notes", e.target.value)} />
+                      <button className="btn-icon" onClick={() => removeSetFromRow(r.workoutId, exId, idx)}><X size={18} /></button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="box-kg">{s.weight || 0}</span>
+                      <span className="box-rip">{s.reps || 0}</span>
+                      <span className="box-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</span>
+                      <span className="box-rir">{s.recupero || ""}</span>
+                      <span className="box-note">{s.notes || ""}</span>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+            {isEditing && (
+              <button className="btn btn-ghost" disabled={r.item.sets.length >= 10} onClick={() => addSetToRow(r.workoutId, exId)}>
+                <Plus size={18} /> Aggiungi serie
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="col" style={{ gap: 16 }}>
       <Section title={`Nuovo allenamento — ${muscle}`}>
@@ -250,12 +341,65 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
             <div className="col" style={{ gap: 14 }}>
               {addedList.map((ex) => {
                 const item = items.find((it) => it.exerciseId === ex.id);
+                const last = lastExecution(ex.id);
+                const secondLast = secondLastExecution(ex.id);
+                const pastDates = datesForExercise(workouts, ex.id);
+                const datesOpen = openDatesFor.has(ex.id);
                 return (
                   <div key={ex.id} className="exercise-block">
                     <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
                       <strong className="exercise-name">{ex.name}</strong>
                       <DeleteButton small onConfirm={() => removeExercise(item.id)} />
                     </div>
+
+                    {pastDates.length > 0 && (
+                      <div style={{ marginBottom: 10 }}>
+                        <button className="dates-count-btn" onClick={() => toggleDatesFor(ex.id)}>
+                          {pastDates.length} allenamenti passati <ChevronRight size={16} className={"chevron" + (datesOpen ? " open" : "")} />
+                        </button>
+                        {datesOpen && (
+                          <div className="col" style={{ gap: 6, marginTop: 8 }}>
+                            {rowsForExercise(ex.id).map((r) => renderDateDetail(ex.id, r))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {secondLast && (
+                      <div className="last-time-block">
+                        <div className="hint">Volta precedente ({formatDateShort(secondLast.date)}):</div>
+                        <div className="set-table" style={{ marginTop: 6 }}>
+                          <div className="set-row set-row-head" style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1.3fr" }}><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Note</span></div>
+                          {secondLast.sets.map((s, i) => (
+                            <div className="set-row" key={i} style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1.3fr" }}>
+                              <span className="set-idx">{i + 1}</span>
+                              <span className="box-kg">{s.weight || 0}</span>
+                              <span className="box-rip">{s.reps || 0}</span>
+                              <span className="box-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</span>
+                              <span className="box-note">{s.notes || ""}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {last && (
+                      <div className="last-time-block">
+                        <div className="hint">Ultima volta ({formatDateShort(last.date)}):</div>
+                        <div className="set-table" style={{ marginTop: 6 }}>
+                          <div className="set-row set-row-head" style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1.3fr" }}><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Note</span></div>
+                          {last.sets.map((s, i) => (
+                            <div className="set-row" key={i} style={{ gridTemplateColumns: "18px 1fr 1fr 0.8fr 1.3fr" }}>
+                              <span className="set-idx">{i + 1}</span>
+                              <span className="box-kg">{s.weight || 0}</span>
+                              <span className="box-rip">{s.reps || 0}</span>
+                              <span className="box-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</span>
+                              <span className="box-note">{s.notes || ""}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {item.sets.length > 0 && (
                       <div className="set-table">
                         <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Min.</span><span>Note</span><span></span></div>
@@ -318,9 +462,7 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
           <div className="col" style={{ gap: 10 }}>
             {orderedIds.map((exId) => {
               const ex = exercises.find((e) => e.id === exId);
-              const rows = workouts.filter((w) => w.exercises.some((it) => it.exerciseId === exId))
-                .map((w) => ({ workoutId: w.id, date: w.date, item: w.exercises.find((it) => it.exerciseId === exId) }))
-                .sort((a, b) => (a.date > b.date ? -1 : 1));
+              const rows = rowsForExercise(exId);
               const exOpen = openExId === exId;
               return (
                 <div key={exId} className="history-ex-card">
@@ -328,68 +470,7 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
                     <strong>{ex ? ex.name : "?"}</strong>
                     <ChevronRight size={20} className={"chevron" + (exOpen ? " open" : "")} />
                   </div>
-                  {exOpen && rows.map((r) => {
-                    const key = exId + "-" + r.workoutId;
-                    const isOpen = openDateKey === key;
-                    const isEditing = editingKey === key;
-                    return (
-                      <div key={key} className="history-date-card">
-                        <div className="history-date-head row" style={{ justifyContent: "space-between" }} onClick={() => setOpenDateKey(isOpen ? null : key)}>
-                          <span>{formatDateShort(r.date)} — {r.item.sets.length} serie</span>
-                          {isOpen && (
-                            <div className="row" style={{ gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                              <button className="btn btn-ghost" onClick={() => setEditingKey(isEditing ? null : key)}>{isEditing ? "Fatto" : "Modifica"}</button>
-                              <DeleteButton small onConfirm={() => deleteEntireEntry(r.workoutId, exId)} />
-                            </div>
-                          )}
-                        </div>
-                        {isOpen && (
-                          <div className="col" style={{ gap: 8, marginTop: 8 }}>
-                            {isEditing && (
-                              <div>
-                                <label className="label">Data</label>
-                                <input type="date" className="input" value={r.date} onChange={(e) => updateWorkoutDate(r.workoutId, e.target.value)} />
-                              </div>
-                            )}
-                            <div className="set-table">
-                              <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Min.</span><span>Note</span>{isEditing && <span></span>}</div>
-                              {r.item.sets.map((s, idx) => (
-                                <div className="set-row" key={idx}>
-                                  <span className="set-idx">{idx + 1}</span>
-                                  {isEditing ? (
-                                    <>
-                                      <input className="input input-kg" type="number" value={s.weight} onChange={(e) => updateSetField(r.workoutId, exId, idx, "weight", e.target.value)} />
-                                      <input className="input input-rip" type="number" value={s.reps} onChange={(e) => updateSetField(r.workoutId, exId, idx, "reps", e.target.value)} />
-                                      <input className="input input-rir" type="number" value={s.rir} onChange={(e) => updateSetField(r.workoutId, exId, idx, "rir", e.target.value)} />
-                                      <select className="input input-rir" value={s.recupero || ""} onChange={(e) => updateSetField(r.workoutId, exId, idx, "recupero", e.target.value)}>
-                                        <option value="">—</option>
-                                        {RECUPERO_OPTIONS.map((rc) => <option key={rc} value={rc}>{rc}</option>)}
-                                      </select>
-                                      <input className="input input-note" value={s.notes} onChange={(e) => updateSetField(r.workoutId, exId, idx, "notes", e.target.value)} />
-                                      <button className="btn-icon" onClick={() => removeSetFromRow(r.workoutId, exId, idx)}><X size={18} /></button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span className="box-kg">{s.weight || 0}</span>
-                                      <span className="box-rip">{s.reps || 0}</span>
-                                      <span className="box-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</span>
-                                      <span className="box-rir">{s.recupero || ""}</span>
-                                      <span className="box-note">{s.notes || ""}</span>
-                                    </>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                            {isEditing && (
-                              <button className="btn btn-ghost" disabled={r.item.sets.length >= 10} onClick={() => addSetToRow(r.workoutId, exId)}>
-                                <Plus size={18} /> Aggiungi serie
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {exOpen && rows.map((r) => renderDateDetail(exId, r))}
                 </div>
               );
             })}
@@ -639,20 +720,22 @@ export default function App() {
         .set-row{ display:grid; grid-template-columns:20px 1fr 1fr 0.8fr 1fr 1.2fr 24px; gap:5px; align-items:center; }
         .set-row-head{ font-size:11px; color:var(--text-dim); text-transform:uppercase; }
         .set-idx{ font-size:13px; color:var(--text-dim); text-align:center; }
-        .input-kg{ background:#ffd9d3; color:#000; border-color:#ffb3a3; font-weight:700; }
-        .input-rip{ background:#e0f5b0; color:#000; border-color:#c8e878; font-weight:700; }
+        .input-kg{ background:#ff0000; color:#fff; border-color:#ff0000; font-weight:700; font-size:20px; }
+        .input-rip{ background:#aef000; color:#000; border-color:#aef000; font-weight:700; font-size:20px; }
         .input-rir{ background:#ffffff; color:#000; border-color:#ddd; font-weight:700; }
         .input-note{ background:#ffffff; color:#000; border-color:#ddd; }
-        .box-kg{ background:#ffd9d3; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; }
-        .box-rip{ background:#e0f5b0; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; }
+        .box-kg{ background:#ff0000; color:#fff; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; font-size:20px; }
+        .box-rip{ background:#aef000; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; font-size:20px; }
         .box-rir{ background:#ffffff; color:#000; font-weight:700; text-align:center; padding:8px 4px; border-radius:6px; border:1px solid #ddd; }
         .box-note{ background:#ffffff; color:#000; text-align:left; padding:8px 6px; border-radius:6px; border:1px solid #ddd; overflow-x:auto; white-space:nowrap; }
         .save-bar{ display:flex; align-items:center; justify-content:space-between; border-top:1px solid var(--border-c); padding-top:14px; }
         .plate-val{ font-weight:700; font-size:26px; color:var(--accent); }
         .plate-label{ font-size:11px; color:var(--text-dim); text-transform:uppercase; }
         .group-ex-list{ display:flex; flex-direction:column; gap:4px; }
-        .group-ex-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:15px; background:var(--surface); border:1px solid var(--border-c); }
-        .group-ex-row-done span{ font-weight:700; color:var(--accent); }
+        .group-ex-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:15px; background:#ececea; border:1px solid var(--border-c); }
+        .group-ex-row-done span{ font-weight:700; color:#c0392b; }
+        .dates-count-btn{ display:flex; align-items:center; gap:4px; background:#ececea; border:1px solid var(--border-c); color:var(--text); font-weight:700; font-size:13px; padding:6px 10px; border-radius:6px; cursor:pointer; font-family:inherit; }
+        .last-time-block{ margin-bottom:10px; }
         .muscoli-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
         .muscoli-tile{ padding:22px 14px; border-radius:8px; color:#fff; font-weight:700; font-size:16px; text-align:center; cursor:pointer; }
         .history-ex-card{ border:1px solid var(--border-c); border-radius:8px; overflow:hidden; }
