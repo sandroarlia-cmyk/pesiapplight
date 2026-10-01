@@ -1017,6 +1017,7 @@ export default function App() {
           background:var(--bg); border-radius:12px; padding:16px;
         }
         .progressi-dark .btn-primary{ color:#0f1310; }
+        .progressi-dark .hint, .progressi-dark .muted{ color:var(--text); }
         .chart-relative-wrap{ position:relative; }
         .input-sm-w{ width:auto; max-width:320px; }
         .volume-badge{ display:inline-flex; align-items:center; justify-content:center; width:92px; max-width:100%; box-sizing:border-box; background:#1f6b3a; color:#ffffff; font-weight:700; padding:3px 6px; border-radius:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1037,15 +1038,15 @@ export default function App() {
           .input-kg, .box-kg{ font-size:22px; }
           .group-ex-row span{ font-weight:700; }
           .input-discs, .box-discs{ background:#ffd9d3; font-weight:700; font-size:18px; }
+          .gt-nav{ overflow-x:auto; flex-wrap:nowrap; }
+          .gt-nav-item{ flex-shrink:0; white-space:nowrap; }
           .progressi-dark{ padding:10px; border-radius:8px; max-width:100%; box-sizing:border-box; overflow-x:hidden; }
           .chart-uniform-wrap{ width:100% !important; max-width:100% !important; box-sizing:border-box !important; }
-          .chart-uniform-wrap .card{ width:100% !important; max-width:100% !important; box-sizing:border-box !important; overflow-x:hidden !important; background:#ffffff !important; border-color:#ffffff !important; }
+          .chart-uniform-wrap .card{ width:100% !important; max-width:100% !important; box-sizing:border-box !important; overflow-x:hidden !important; }
           .chart-uniform-wrap .section-head{ flex-wrap:wrap !important; }
           .chart-uniform-wrap .section-head > div{ min-width:0 !important; max-width:100% !important; flex-wrap:wrap !important; }
           .chart-uniform-wrap select.input-sm-w{ min-width:0 !important; max-width:100% !important; }
           .chart-uniform-wrap > div[style]{ height:260px !important; }
-          .chart-uniform-wrap{ --bg:#ffffff; --surface:#ffffff; --surface-2:#f2f2f2; --border-c:#dddddd; --text:#1a1a1a; --text-dim:#666666; }
-          .chart-uniform-wrap .pinned-tooltip-box, .chart-uniform-wrap .pinned-tooltip-box *{ color:#1a1a1a !important; }
           .input-kg, .input-rip, .input-rir, .input-discs, .input-note,
           .box-kg, .box-rip, .box-rir, .box-discs, .box-note{ min-height:44px; box-sizing:border-box; }
           .gt-main{ padding:10px; }
