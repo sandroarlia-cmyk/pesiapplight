@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Dumbbell, Plus, Trash2, Search, X, ChevronRight, ChevronLeft, Save } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { loadGymData, saveWorkoutDoc, deleteWorkoutDoc, saveConfigDoc } from "./firebaseClient";
 
 // ---------- Dati di base (identici all'app principale) ----------
@@ -166,25 +165,6 @@ function DeleteButton({ onConfirm, small }) {
   );
 }
 
-function PinnedTooltip({ active, payload, label, labelFormatter, formatter, valueColor }) {
-  if (!active || !payload || !payload.length) return null;
-  return (
-    <div className="pinned-tooltip-box" style={{ background: "var(--surface-2)", border: "1px solid var(--border-c)", borderRadius: 8, padding: "18px 22px", minWidth: 200 }}>
-      <div style={{ color: "var(--text-dim)", fontSize: 15, marginBottom: 8 }}>
-        {labelFormatter ? labelFormatter(label, payload) : label}
-      </div>
-      {payload.map((entry, i) => {
-        const [val, name] = formatter ? formatter(entry.value, entry.name, entry) : [entry.value, entry.name];
-        return (
-          <div key={i} style={{ color: valueColor || "#ffffff", fontWeight: 700, fontSize: 20, marginBottom: 3 }}>
-            {name}: {val}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function Section({ title, right, children }) {
   return (
     <div className="card">
@@ -204,7 +184,14 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
   const [items, setItems] = useState([]);
   const [query, setQuery] = useState("");
   const [openExId, setOpenExId] = useState(null);
-  const [openDateKey, setOpenDateKey] = useState(null);
+  const [openDateKeys, setOpenDateKeys] = useState(() => new Set());
+  function toggleDateKey(key) {
+    setOpenDateKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
   const [editingKey, setEditingKey] = useState(null);
   const [openDatesFor, setOpenDatesFor] = useState(() => new Set());
 
@@ -303,12 +290,15 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
 
   function renderDateDetail(exId, r) {
     const key = exId + "-" + r.workoutId;
-    const isOpen = openDateKey === key;
+    const isOpen = openDateKeys.has(key);
     const isEditing = editingKey === key;
     return (
       <div key={key} className="history-date-card">
-        <div className="history-date-head row" style={{ justifyContent: "space-between" }} onClick={() => setOpenDateKey(isOpen ? null : key)}>
-          <span>{formatDateShort(r.date)} — {r.item.sets.length} serie</span>
+        <div className="history-date-head row" style={{ justifyContent: "space-between" }} onClick={() => toggleDateKey(key)}>
+          <div className="row" style={{ gap: 8 }}>
+            <span className="box-date">{formatDateShort(r.date)}</span>
+            <span className="box-serie">{r.item.sets.length} serie</span>
+          </div>
           {isOpen && (
             <div className="row" style={{ gap: 6 }} onClick={(e) => e.stopPropagation()}>
               <button className="btn btn-ghost" onClick={() => setEditingKey(isEditing ? null : key)}>{isEditing ? "Fatto" : "Modifica"}</button>
@@ -549,71 +539,58 @@ function MuscoliTab({ onSelectMuscle }) {
 // ---------- Serie Settimanali: unico modulo, identico all'app principale ----------
 
 function SerieSettimanaliTab({ workouts, exercises }) {
-  const [serieGruppo, setSerieGruppo] = useState(MUSCLE_GROUPS[0]);
-  const [pinnedSerieSett, setPinnedSerieSett] = useState(null);
+  const [mode, setMode] = useState("settimana");
+  const [weekStart, setWeekStart] = useState(getMonday(todayISO()));
+  const [month, setMonth] = useState(todayISO().slice(0, 7));
+  const [year, setYear] = useState(todayISO().slice(0, 4));
 
-  function togglePinned(current, setCurrent, key, x, y) {
-    setCurrent((prev) => (prev && prev.key === key ? null : { key, x, y }));
-  }
+  const weekEnd = addDays(weekStart, 6);
+  const weekStartISO = isoOf(weekStart), weekEndISO = isoOf(weekEnd);
 
-  useEffect(() => {
-    function handleOutsideClick(e) {
-      if (!e.target.closest(".chart-relative-wrap")) setPinnedSerieSett(null);
-    }
-    document.addEventListener("click", handleOutsideClick, true);
-    return () => document.removeEventListener("click", handleOutsideClick, true);
-  }, []);
+  const weekStats = useMemo(() => weeklyMuscleStats(workouts, exercises, weekStartISO, weekEndISO), [workouts, exercises, weekStartISO, weekEndISO]);
+  const monthStats = useMemo(() => weeklyMuscleStats(workouts, exercises, month + "-01", month + "-31"), [workouts, exercises, month]);
+  const yearStats = useMemo(() => weeklyMuscleStats(workouts, exercises, year + "-01-01", year + "-12-31"), [workouts, exercises, year]);
 
-  const weeklySeriesData = useMemo(() => {
-    const weeks = [];
-    for (let i = 9; i >= 0; i--) {
-      const ws = addDays(getMonday(todayISO()), -7 * i);
-      const we = addDays(ws, 6);
-      const stats = weeklyMuscleStats(workouts, exercises, isoOf(ws), isoOf(we));
-      const s = stats[serieGruppo] || { sets: 0 };
-      weeks.push({
-        settimana: formatDateShort(isoOf(ws)),
-        periodo: `${formatDateShort(isoOf(ws))} – ${formatDateShort(isoOf(we))}`,
-        serie: s.sets
-      });
-    }
-    return weeks;
-  }, [workouts, exercises, serieGruppo]);
+  const activeStats = mode === "settimana" ? weekStats : mode === "mese" ? monthStats : yearStats;
+  const activeRows = Object.entries(activeStats).filter(([, v]) => v.sets > 0);
 
   return (
-    <div className="progressi-dark">
-      <div className="chart-uniform-wrap">
-        <Section title="TOTALE SERIE SETTIMANALI PER MUSCOLO" right={
-          <select className="input input-sm-w" value={serieGruppo} onChange={(e) => setSerieGruppo(e.target.value)}>
-            {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-        }>
-          <div className="chart-relative-wrap" style={{ height: 260 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklySeriesData}
-                onClick={(state) => { if (state && state.activeLabel) togglePinned(pinnedSerieSett, setPinnedSerieSett, state.activeLabel, state.chartX, state.chartY); }}>
-                <CartesianGrid stroke="var(--border-c)" strokeDasharray="3 3" />
-                <XAxis dataKey="settimana" stroke="var(--text-dim)" fontSize={11} />
-                <YAxis stroke="var(--text-dim)" fontSize={11} />
-                <Tooltip
-                  active={pinnedSerieSett ? true : undefined}
-                  payload={pinnedSerieSett ? (() => {
-                    const p = weeklySeriesData.find((d) => d.settimana === pinnedSerieSett.key);
-                    return p ? [{ name: "Totale serie", value: p.serie, dataKey: "serie", payload: p, color: "#aef000" }] : undefined;
-                  })() : undefined}
-                  label={pinnedSerieSett ? pinnedSerieSett.key : undefined}
-                  coordinate={pinnedSerieSett ? { x: pinnedSerieSett.x, y: pinnedSerieSett.y } : undefined}
-                  wrapperStyle={{ pointerEvents: "auto" }}
-                  content={(props) => <PinnedTooltip {...props}
-                    labelFormatter={(label, payload) => (payload && payload[0] ? payload[0].payload.periodo : label)}
-                    formatter={(value) => [value, "Totale serie"]} />}
-                />
-                <Bar dataKey="serie" fill="#aef000" name="Totale serie" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+    <div className="statistiche-dark">
+      <Section title="Statistiche" right={
+        <div style={{ display: "flex", gap: 6 }}>
+          {["settimana", "mese", "anno"].map((m) => (
+            <button key={m} className={"btn " + (mode === m ? "btn-primary" : "btn-ghost")} onClick={() => setMode(m)}>
+              {m.charAt(0).toUpperCase() + m.slice(1)}
+            </button>
+          ))}
+        </div>
+      }>
+        {mode === "settimana" && (
+          <div className="week-nav">
+            <button className="btn-icon" onClick={() => setWeekStart(addDays(weekStart, -7))}><ChevronLeft size={22} /></button>
+            <span>{formatDateShort(weekStartISO)} – {formatDateShort(weekEndISO)}</span>
+            <button className="btn-icon" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronRight size={22} /></button>
           </div>
-        </Section>
-      </div>
+        )}
+        {mode === "mese" && (
+          <input type="month" className="input" style={{ maxWidth: 200 }} value={month} onChange={(e) => setMonth(e.target.value)} />
+        )}
+        {mode === "anno" && (
+          <input type="number" className="input" style={{ maxWidth: 140 }} value={year} onChange={(e) => setYear(e.target.value)} />
+        )}
+
+        <div className="stats-table" style={{ marginTop: 14 }}>
+          <div className="stats-row stats-row-head">
+            <span>Gruppo muscolare</span><span>Serie</span><span>Ripetizioni</span><span>Volume (kg)</span>
+          </div>
+          {activeRows.length === 0 && <p className="muted" style={{ padding: "10px 0" }}>Nessun dato per questo periodo.</p>}
+          {activeRows.map(([m, v]) => (
+            <div className="stats-row" key={m}>
+              <span>{m}</span><span>{v.sets}</span><span>{v.reps}</span><span className="volume-badge">{round1(v.volume)}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
     </div>
   );
 }
@@ -860,6 +837,8 @@ export default function App() {
         .chevron.open{ transform:rotate(90deg); }
         .history-date-card{ padding:10px 14px; border-top:1px solid var(--border-c); }
         .history-date-head{ cursor:pointer; font-weight:700; font-size:14px; }
+        .box-date{ background:#ececea; color:#1a1a1a; font-weight:700; padding:8px 12px; border-radius:6px; border:1px solid var(--border-c); }
+        .box-serie{ background:#3E7191; color:#fff; font-weight:700; padding:8px 12px; border-radius:6px; }
 
         /* Settimana — identica all'app principale */
         .promemoria-title{ font-size:22px; text-align:center; letter-spacing:0.5px; }
@@ -895,13 +874,18 @@ export default function App() {
         .nuovo-allenamento-dark{ background:#000; border-radius:12px; padding:16px; }
 
         /* Serie Settimanali — identica all'app principale */
-        .progressi-dark{
+        .statistiche-dark{
           --bg:#161915; --surface:#1c1f1a; --surface-2:#242821; --border-c:#38402f;
-          --text:#e8ece5; --text-dim:#9fb89a; --accent:#7be08a; --accent-dim:#2c3126;
+          --text:#ffffff; --text-dim:#ffffff; --accent:#7be08a; --accent-dim:#2c3126;
           background:var(--bg); border-radius:12px; padding:16px;
         }
-        .chart-relative-wrap{ position:relative; }
-        .input-sm-w{ width:auto; max-width:320px; }
+        .statistiche-dark .btn-primary{ color:#0f1310; }
+        .stats-table{ display:flex; flex-direction:column; gap:4px; }
+        .stats-row{ display:grid; grid-template-columns:2fr 1fr 1fr 1fr; padding:9px 4px; font-size:14px; border-bottom:1px solid var(--border-c); color:var(--text); }
+        .stats-row-head{ color:var(--text-dim); font-size:11px; text-transform:uppercase; border-bottom:1px solid var(--border-c); }
+        .week-nav{ display:flex; align-items:center; gap:14px; margin-bottom:8px; font-weight:700; }
+        .volume-badge{ display:inline-block; background:#1f6b3a; color:#ffffff; font-weight:700; padding:3px 10px; border-radius:6px; }
+
 
         @media (min-width: 641px){
           .gt-main-settimana{ max-width:980px; }
@@ -913,14 +897,6 @@ export default function App() {
           .set-table{ overflow-x:auto; }
           .promemoria-grid{ grid-template-columns:repeat(7, 118px); overflow-x:auto; padding-bottom:6px; }
           .progressi-dark{ padding:10px; border-radius:8px; max-width:100%; box-sizing:border-box; overflow-x:hidden; }
-          .chart-uniform-wrap{ width:100% !important; max-width:100% !important; box-sizing:border-box !important; }
-          .chart-uniform-wrap .card{ width:100% !important; max-width:100% !important; box-sizing:border-box !important; overflow-x:hidden !important; background:#ffffff !important; border-color:#ffffff !important; }
-          .chart-uniform-wrap .section-head{ flex-wrap:wrap !important; }
-          .chart-uniform-wrap .section-head > div{ min-width:0 !important; max-width:100% !important; flex-wrap:wrap !important; }
-          .chart-uniform-wrap select.input-sm-w{ min-width:0 !important; max-width:100% !important; }
-          .chart-uniform-wrap > div[style]{ height:260px !important; }
-          .chart-uniform-wrap{ --bg:#ffffff; --surface:#ffffff; --surface-2:#f2f2f2; --border-c:#dddddd; --text:#1a1a1a; --text-dim:#666666; }
-          .chart-uniform-wrap .pinned-tooltip-box, .chart-uniform-wrap .pinned-tooltip-box *{ color:#1a1a1a !important; }
         }
       `}</style>
 
