@@ -288,6 +288,12 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
     setWorkouts([...workouts, { id: uid(), date, exercises: items }]);
     setItems([]);
   }
+  function saveOne(itemId) {
+    const item = items.find((it) => it.id === itemId);
+    if (!item || !item.sets.length) return;
+    setWorkouts([...workouts, { id: uid(), date, exercises: [item] }]);
+    setItems(items.filter((it) => it.id !== itemId));
+  }
   const totalVolume = items.reduce((a, it) => a + itemVolume(it), 0);
 
   // Storico: elenco già salvato per questo muscolo, per esercizio e data
@@ -414,7 +420,12 @@ function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }
                   <div key={ex.id} className="exercise-block">
                     <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
                       <strong className="exercise-name">{ex.name}</strong>
-                      <DeleteButton small onConfirm={() => removeExercise(item.id)} />
+                      <div className="row" style={{ gap: 6 }}>
+                        <button className="btn btn-primary" disabled={!item.sets.length} onClick={() => saveOne(item.id)}>
+                          <Save size={16} /> Salva
+                        </button>
+                        <DeleteButton small onConfirm={() => removeExercise(item.id)} />
+                      </div>
                     </div>
 
                     {pastDates.length > 0 && (
