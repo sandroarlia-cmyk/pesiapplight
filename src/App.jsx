@@ -838,7 +838,7 @@ function AllenamentiTab({ workouts, exercises }) {
                     <span className="settimana-popup-badge settimana-popup-badge-serie">{e.setsCount} serie</span>
                   </div>
                   {openPopupItem === i && (
-                    <div className="nuovo-allenamento-dark" onClick={(ev) => ev.stopPropagation()}>
+                    <div onClick={(ev) => ev.stopPropagation()} style={{ marginTop: 12 }}>
                       <div className="set-table">
                         <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Dischi Kg</span><span>Min.</span><span>Note</span><span></span></div>
                         {e.sets.map((s, idx) => (
