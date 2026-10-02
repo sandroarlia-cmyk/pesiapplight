@@ -200,8 +200,24 @@ function Section({ title, right, children }) {
 // ---------- Muscoli: inserimento + elenco con modifica/cancella ----------
 
 function MuscleScreen({ muscle, exercises, setExercises, workouts, setWorkouts }) {
-  const [date, setDate] = useState(todayISO());
-  const [items, setItems] = useState([]);
+  const draftKey = "gym-lite-draft-" + muscle;
+  const loadDraft = () => {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch { return null; }
+  };
+  const draft = loadDraft();
+  const [date, setDate] = useState(draft && draft.date ? draft.date : todayISO());
+  const [items, setItems] = useState(draft && draft.items ? draft.items : []);
+
+  useEffect(() => {
+    try {
+      if (items.length === 0) localStorage.removeItem(draftKey);
+      else localStorage.setItem(draftKey, JSON.stringify({ date, items }));
+    } catch { /* storage non disponibile: la bozza semplicemente non persiste */ }
+  }, [date, items, draftKey]);
   const [query, setQuery] = useState("");
   const [openExId, setOpenExId] = useState(null);
   const [openDateKeys, setOpenDateKeys] = useState(() => new Set());
