@@ -838,22 +838,19 @@ function AllenamentiTab({ workouts, exercises }) {
                     <span className="settimana-popup-badge settimana-popup-badge-serie">{e.setsCount} serie</span>
                   </div>
                   {openPopupItem === i && (
-                    <div className="nuovo-allenamento-dark">
-                      <div className="settimana-popup-sets">
-                        <div className="settimana-popup-set-row settimana-popup-set-titles" onClick={(ev) => ev.stopPropagation()}>
-                          <span className="settimana-popup-idx"></span>
-                          <div className="settimana-popup-mini-box settimana-popup-mini-kg">KG</div>
-                          <div className="settimana-popup-mini-box settimana-popup-mini-rip">RIP</div>
-                          <div className="settimana-popup-mini-box settimana-popup-mini-rir">RIR</div>
-                          <div className="settimana-popup-mini-box settimana-popup-mini-note">NOTE</div>
-                        </div>
+                    <div className="nuovo-allenamento-dark" onClick={(ev) => ev.stopPropagation()}>
+                      <div className="set-table">
+                        <div className="set-row set-row-head"><span>#</span><span>Kg</span><span>Rip</span><span>RIR</span><span>Dischi Kg</span><span>Min.</span><span>Note</span><span></span></div>
                         {e.sets.map((s, idx) => (
-                          <div key={idx} className="settimana-popup-set-row" onClick={(ev) => ev.stopPropagation()}>
-                            <span className="settimana-popup-idx">{idx + 1}</span>
-                            <div className="settimana-popup-mini-box settimana-popup-mini-kg">{s.weight || 0} kg</div>
-                            <div className="settimana-popup-mini-box settimana-popup-mini-rip">{s.reps || 0}</div>
-                            <div className="settimana-popup-mini-box settimana-popup-mini-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</div>
-                            <div className="settimana-popup-mini-box settimana-popup-mini-note">{s.notes || ""}</div>
+                          <div key={idx} className="set-row">
+                            <span className="set-idx">{idx + 1}</span>
+                            <span className="box-kg">{s.weight || 0}</span>
+                            <span className="box-rip">{s.reps || 0}</span>
+                            <span className="box-rir">{s.rir !== undefined && s.rir !== "" ? s.rir : ""}</span>
+                            <span className="box-discs">{s.discs || ""}</span>
+                            <span className="box-rir">{s.recupero || ""}</span>
+                            <span className="box-note">{s.notes || ""}</span>
+                            <span></span>
                           </div>
                         ))}
                       </div>
@@ -1037,16 +1034,6 @@ export default function App() {
         .settimana-popup-badge{ padding:6px 12px; border-radius:6px; font-weight:700; font-size:13px; }
         .settimana-popup-badge-kg{ background:#c0392b; color:#fff; }
         .settimana-popup-badge-serie{ background:#aef000; color:#000; }
-        .settimana-popup-sets{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
-        .settimana-popup-set-row{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; }
-        .settimana-popup-idx{ flex-shrink:0; width:18px; font-size:14px; color:#fff; text-align:center; }
-        .settimana-popup-mini-box{ flex-shrink:0; width:76px; box-sizing:border-box; white-space:nowrap; text-align:center; padding:8px; border-radius:6px; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; }
-        .settimana-popup-mini-note{ width:auto; min-width:120px; justify-content:flex-start; text-align:left; }
-        .settimana-popup-mini-kg{ background:#1f6b3a; color:#fff; }
-        .settimana-popup-mini-rip{ background:#aef000; color:#000; }
-        .settimana-popup-mini-rir{ background:#ffffff; color:#1a1a1a; }
-        .settimana-popup-mini-note{ background:#ffffff; color:#1a1a1a; }
-        .settimana-popup-set-titles .settimana-popup-mini-box{ background:transparent !important; color:#fff !important; font-size:12px; }
         .nuovo-allenamento-dark{ background:#000; border-radius:12px; padding:16px; }
 
         /* Serie Settimanali — identica all'app principale */
