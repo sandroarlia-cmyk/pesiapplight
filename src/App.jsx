@@ -134,13 +134,13 @@ function DateItalianPicker({ value, onChange }) {
   }
   return (
     <div className="date-it-picker">
-      <select className="input" value={day} onChange={(e) => update(Number(e.target.value), month, year)}>
+      <select className="input" style={{ flex: "0 0 62px" }} value={day} onChange={(e) => update(Number(e.target.value), month, year)}>
         {days.map((dd) => <option key={dd} value={dd}>{dd}</option>)}
       </select>
-      <select className="input" style={{ flex: 2 }} value={month} onChange={(e) => update(day, Number(e.target.value), year)}>
+      <select className="input" style={{ flex: "1 1 auto", minWidth: 0 }} value={month} onChange={(e) => update(day, Number(e.target.value), year)}>
         {MONTHS_IT.map((m, i) => <option key={m} value={i}>{m}</option>)}
       </select>
-      <select className="input" value={year} onChange={(e) => update(day, month, Number(e.target.value))}>
+      <select className="input" style={{ flex: "0 0 86px" }} value={year} onChange={(e) => update(day, month, Number(e.target.value))}>
         {years.map((y) => <option key={y} value={y}>{y}</option>)}
       </select>
     </div>
