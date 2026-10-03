@@ -1115,7 +1115,7 @@ export default function App() {
         .group-ex-list{ display:flex; flex-direction:column; gap:4px; }
         .group-ex-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:15px; background:#E6ECF2; border:1px solid var(--border-c); }
         .group-ex-row-done span{ font-weight:700; color:#c0392b; }
-        .dates-count-btn{ display:flex; align-items:center; gap:4px; background:#ececea; border:1px solid var(--border-c); color:var(--text); font-weight:700; font-size:13px; padding:6px 10px; border-radius:6px; cursor:pointer; font-family:inherit; }
+        .dates-count-btn{ display:flex; align-items:center; gap:4px; background:#ffffff; border:1px solid var(--border-c); color:var(--text); font-weight:700; font-size:13px; padding:6px 10px; border-radius:6px; cursor:pointer; font-family:inherit; }
         .last-time-block{ margin-bottom:10px; }
         .muscoli-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
         .muscoli-tile{ padding:22px 14px; border-radius:8px; color:#fff; font-weight:700; font-size:16px; text-align:center; cursor:pointer; }
@@ -1125,7 +1125,8 @@ export default function App() {
         .chevron.open{ transform:rotate(90deg); }
         .history-date-card{ padding:10px 14px; border-top:1px solid var(--border-c); }
         .history-date-head{ cursor:pointer; font-weight:700; font-size:14px; }
-        .box-date{ background:#ececea; color:#1a1a1a; font-weight:700; padding:8px 4px; border-radius:6px; border:1px solid var(--border-c); width:84px; text-align:center; box-sizing:border-box; }
+        .box-date{ background:#E6ECF2; color:#1a1a1a; font-weight:700; padding:8px 4px; border-radius:6px; border:1px solid var(--border-c); width:84px; text-align:center; box-sizing:border-box; }
+        .exercise-block .box-date{ background:#ffffff; }
         .box-serie{ background:#3E7191; color:#fff; font-weight:700; padding:8px 4px; border-radius:6px; width:84px; text-align:center; box-sizing:border-box; }
 
         /* Settimana — identica all'app principale */
@@ -1133,7 +1134,7 @@ export default function App() {
         .settimana-card{ padding:16px; }
         .settimana-range{ font-weight:700; font-size:14px; color:var(--text-dim); text-align:center; margin-bottom:14px; text-transform:uppercase; }
         .promemoria-grid{ display:grid; grid-template-columns:repeat(7, 1fr); gap:10px; }
-        .promemoria-col{ background:var(--surface-2); border:1px solid var(--border-c); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:8px; min-height:110px; }
+        .promemoria-col{ background:#E6ECF2; border:1px solid var(--border-c); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:8px; min-height:110px; }
         .promemoria-col-head{ font-weight:700; font-size:12px; text-align:center; color:var(--accent); text-transform:uppercase; }
         .promemoria-col-date{ font-size:11px; text-align:center; color:var(--text-dim); padding-bottom:6px; border-bottom:1px solid var(--border-c); }
         .promemoria-list{ display:flex; flex-direction:column; gap:6px; flex:1; }
@@ -1143,7 +1144,7 @@ export default function App() {
         .settimana-popup{ background:var(--surface); border-radius:12px; padding:20px; max-width:420px; width:100%; max-height:80vh; overflow-y:auto; }
         .settimana-popup-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; font-size:17px; font-weight:700; }
         .settimana-popup-list{ display:flex; flex-direction:column; gap:12px; }
-        .settimana-popup-item{ background:var(--surface-2); border-radius:8px; padding:12px 14px; }
+        .settimana-popup-item{ background:#E6ECF2; border-radius:8px; padding:12px 14px; }
         .settimana-popup-item-name{ font-weight:700; margin-bottom:8px; }
         .settimana-popup-item-stats{ display:flex; gap:10px; flex-wrap:wrap; }
         .settimana-popup-badge{ padding:6px 12px; border-radius:6px; font-weight:700; font-size:13px; }
