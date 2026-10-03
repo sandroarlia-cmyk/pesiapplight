@@ -1123,10 +1123,10 @@ export default function App() {
         .history-ex-title-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 14px; cursor:pointer; background:#E6ECF2; }
         .chevron{ transition:transform 0.15s; }
         .chevron.open{ transform:rotate(90deg); }
-        .history-date-card{ padding:10px 14px; border-top:1px solid var(--border-c); }
+        .history-date-card{ padding:10px 14px; border-top:1px solid var(--border-c); background:#E6ECF2; }
         .history-date-head{ cursor:pointer; font-weight:700; font-size:14px; }
         .box-date{ background:#E6ECF2; color:#1a1a1a; font-weight:700; padding:8px 4px; border-radius:6px; border:1px solid var(--border-c); width:84px; text-align:center; box-sizing:border-box; }
-        .exercise-block .box-date{ background:#ffffff; }
+        .history-date-card .box-date, .exercise-block .box-date{ background:#ffffff; }
         .box-serie{ background:#3E7191; color:#fff; font-weight:700; padding:8px 4px; border-radius:6px; width:84px; text-align:center; box-sizing:border-box; }
 
         /* Settimana — identica all'app principale */
