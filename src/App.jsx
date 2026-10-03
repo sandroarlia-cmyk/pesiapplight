@@ -1057,7 +1057,7 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&display=swap');
         *{ box-sizing:border-box; }
         .gt-root{
-          --bg:#F7F7F5; --surface:#FFFFFF; --surface-2:#F0F0EE; --border-c:#DDDDD8;
+          --bg:#E6ECF2; --surface:#FFFFFF; --surface-2:#F0F0EE; --border-c:#C9D4DF;
           --text:#1a1a1a; --text-dim:#6b6b66; --accent:#3E7191;
           background:var(--bg); color:var(--text); font-family:'Comfortaa','Segoe UI',Candara,Arial,sans-serif;
           min-height:100vh; text-transform:uppercase;
@@ -1093,7 +1093,7 @@ export default function App() {
         .search-wrap{ position:relative; }
         .search-icon{ position:absolute; left:10px; top:11px; color:var(--text-dim); }
         .date-it-picker{ display:flex; gap:6px; }
-        .exercise-block{ border:1px solid var(--border-c); border-radius:8px; padding:12px; background:var(--surface-2); }
+        .exercise-block{ border:1px solid var(--border-c); border-radius:8px; padding:12px; background:#E6ECF2; }
         .exercise-name{ font-size:16px; }
         .set-table{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
         .set-row{ display:grid; grid-template-columns:20px 1fr 1fr 0.8fr 1fr 1fr 1.2fr 24px; gap:5px; align-items:center; }
@@ -1113,14 +1113,14 @@ export default function App() {
         .plate-val{ font-weight:700; font-size:26px; color:var(--accent); }
         .plate-label{ font-size:11px; color:var(--text-dim); text-transform:uppercase; }
         .group-ex-list{ display:flex; flex-direction:column; gap:4px; }
-        .group-ex-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:15px; background:#ececea; border:1px solid var(--border-c); }
+        .group-ex-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:15px; background:#E6ECF2; border:1px solid var(--border-c); }
         .group-ex-row-done span{ font-weight:700; color:#c0392b; }
         .dates-count-btn{ display:flex; align-items:center; gap:4px; background:#ececea; border:1px solid var(--border-c); color:var(--text); font-weight:700; font-size:13px; padding:6px 10px; border-radius:6px; cursor:pointer; font-family:inherit; }
         .last-time-block{ margin-bottom:10px; }
         .muscoli-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
         .muscoli-tile{ padding:22px 14px; border-radius:8px; color:#fff; font-weight:700; font-size:16px; text-align:center; cursor:pointer; }
         .history-ex-card{ border:1px solid var(--border-c); border-radius:8px; overflow:hidden; }
-        .history-ex-title-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 14px; cursor:pointer; background:var(--surface-2); }
+        .history-ex-title-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 14px; cursor:pointer; background:#E6ECF2; }
         .chevron{ transition:transform 0.15s; }
         .chevron.open{ transform:rotate(90deg); }
         .history-date-card{ padding:10px 14px; border-top:1px solid var(--border-c); }
