@@ -10,6 +10,21 @@ const DAYS = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Saba
 const MONTHS_IT = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
 const RECUPERO_OPTIONS = ["30 sec", "1 min", "1,5 min", "2 min", "2,5 min", "3 min"];
 
+const TAB_ORDER = ["muscoli", "settimana", "serie", "forza"];
+const SWIPE_SKIP_SELECTOR = "input, select, textarea, .settimana-popup-overlay";
+
+// Cerca l'elemento scorrevole in orizzontale più vicino al punto toccato.
+function findHScroller(el) {
+  while (el && el !== document.body) {
+    if (el.scrollWidth > el.clientWidth + 1) {
+      const ox = getComputedStyle(el).overflowX;
+      if (ox === "auto" || ox === "scroll") return el;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
 const MUSCLE_DARK_COLORS = {
   Petto: "#7a1f1f", Spalle: "#8a5a00", Dorso: "#1a3d7c", Gambe: "#6b6b00",
   Bicipiti: "#8a3b12", Tricipiti: "#0f6b6b", Calisthenics: "#8a1a52", Addome: "#4a5568", Altro: "#555555"
@@ -915,11 +930,11 @@ export default function App() {
     })();
   }, [workouts, loaded, loadFailed]);
 
-  const TAB_ORDER = ["muscoli", "settimana", "serie", "forza"];
-  const gestureRef = React.useRef(null);
+  const mainRef = React.useRef(null);
   const contentRef = React.useRef(null);
+  const tabRef = React.useRef(tab);
+  tabRef.current = tab;
   const [slideDir, setSlideDir] = useState("none");
-  const SWIPE_SKIP_SELECTOR = "input, select, textarea, .settimana-popup-overlay";
 
   function goTab(next, dir) {
     setSlideDir(dir);
@@ -931,95 +946,107 @@ export default function App() {
     if (next !== tab) goTab(next, to > from ? "next" : "prev");
     if (next === "muscoli") setActiveMuscle(null);
   }
-  // Cerca l'elemento scorrevole in orizzontale più vicino al punto toccato.
-  function findHScroller(el) {
-    while (el && el !== document.body) {
-      if (el.scrollWidth > el.clientWidth + 1) {
-        const ox = getComputedStyle(el).overflowX;
-        if (ox === "auto" || ox === "scroll") return el;
-      }
-      el = el.parentElement;
-    }
-    return null;
-  }
-  function resetContent(delay) {
-    const el = contentRef.current;
-    if (!el) return;
-    el.style.transition = "transform 180ms ease-out, opacity 180ms ease-out";
-    el.style.transform = "translate3d(0,0,0)";
-    el.style.opacity = "1";
-    setTimeout(() => {
-      if (gestureRef.current) return;
-      const cur = contentRef.current;
-      if (cur) { cur.style.transition = ""; cur.style.transform = ""; cur.style.opacity = ""; }
-    }, delay || 200);
-  }
 
-  function handleTouchStart(e) {
-    if (e.touches.length !== 1 || e.target.closest(SWIPE_SKIP_SELECTOR)) { gestureRef.current = null; return; }
-    const t = e.touches[0];
-    gestureRef.current = { x: t.clientX, y: t.clientY, t0: Date.now(), axis: null, native: false, dx: 0, scroller: findHScroller(e.target) };
-    const el = contentRef.current;
-    if (el) el.style.transition = "none";
-  }
-  function handleTouchMove(e) {
-    const g = gestureRef.current;
-    if (!g || g.native) return;
-    const t = e.touches[0];
-    const dx = t.clientX - g.x;
-    const dy = t.clientY - g.y;
-    if (!g.axis) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      if (Math.abs(dx) > Math.abs(dy) * 1.2) {
-        g.axis = "x";
-        const s = g.scroller;
-        if (s) {
-          const canBack = s.scrollLeft > 0;
-          const canForward = s.scrollLeft < s.scrollWidth - s.clientWidth - 1;
-          if ((dx > 0 && canBack) || (dx < 0 && canForward)) { g.native = true; return; }
-        }
-      } else { g.axis = "y"; return; }
-    }
-    if (g.axis !== "x") return;
-    g.dx = dx;
-    const idx = TAB_ORDER.indexOf(tab);
-    const blocked = (dx > 0 && idx <= 0) || (dx < 0 && idx >= TAB_ORDER.length - 1);
-    const el = contentRef.current;
-    if (el) el.style.transform = "translate3d(" + (dx * (blocked ? 0.15 : 0.5)) + "px,0,0)";
-  }
-  function handleTouchCancel() {
-    const g = gestureRef.current;
-    gestureRef.current = null;
-    if (g && g.axis === "x" && !g.native) { resetContent(); return; }
-    const cur = contentRef.current;
-    if (cur) { cur.style.transition = ""; cur.style.transform = ""; cur.style.opacity = ""; }
-  }
-  function handleTouchEnd() {
-    const g = gestureRef.current;
-    gestureRef.current = null;
-    if (!g || g.axis !== "x" || g.native) {
-      const cur = contentRef.current;
-      if (cur) { cur.style.transition = ""; cur.style.transform = ""; cur.style.opacity = ""; }
-      return;
-    }
-    const idx = TAB_ORDER.indexOf(tab);
-    const goNext = g.dx < 0 && idx < TAB_ORDER.length - 1;
-    const goPrev = g.dx > 0 && idx > 0;
-    const quick = Date.now() - g.t0 < 300 && Math.abs(g.dx) > 40;
-    const far = Math.abs(g.dx) > Math.min(90, window.innerWidth * 0.2);
-    if ((goNext || goPrev) && (far || quick)) {
+  // Swipe tra le schede. Listener nativi (touchmove NON passivo) per poter
+  // bloccare lo scorrimento orizzontale del browser, che altrimenti si prende
+  // il gesto in un verso e lo annulla.
+  useEffect(() => {
+    const root = mainRef.current;
+    if (!root) return undefined;
+    let g = null;
+
+    const clearStyles = () => {
       const el = contentRef.current;
-      if (el) {
-        el.style.transition = "transform 120ms ease-out, opacity 120ms ease-out";
-        el.style.transform = "translate3d(" + (goNext ? "-" : "") + "50px,0,0)";
-        el.style.opacity = "0";
+      if (el) { el.style.transition = ""; el.style.transform = ""; el.style.opacity = ""; el.style.willChange = ""; }
+    };
+    const snapBack = () => {
+      const el = contentRef.current;
+      if (!el) return;
+      el.style.transition = "transform 180ms ease-out, opacity 180ms ease-out";
+      el.style.transform = "translate3d(0,0,0)";
+      el.style.opacity = "1";
+      setTimeout(() => { if (!g) clearStyles(); }, 200);
+    };
+    const applyMove = () => {
+      if (!g) return;
+      g.raf = 0;
+      const el = contentRef.current;
+      if (!el) return;
+      const idx = TAB_ORDER.indexOf(tabRef.current);
+      const blocked = (g.dx > 0 && idx <= 0) || (g.dx < 0 && idx >= TAB_ORDER.length - 1);
+      el.style.transform = "translate3d(" + g.dx * (blocked ? 0.15 : 0.5) + "px,0,0)";
+    };
+
+    const onStart = (e) => {
+      if (e.touches.length !== 1 || e.target.closest(SWIPE_SKIP_SELECTOR)) { g = null; return; }
+      const t = e.touches[0];
+      g = { x: t.clientX, y: t.clientY, t0: Date.now(), axis: null, native: false, dx: 0, raf: 0, scroller: findHScroller(e.target) };
+    };
+    const onMove = (e) => {
+      if (!g || g.native) return;
+      const t = e.touches[0];
+      const dx = t.clientX - g.x;
+      const dy = t.clientY - g.y;
+      if (!g.axis) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        if (Math.abs(dx) > Math.abs(dy) * 1.2) {
+          g.axis = "x";
+          const s = g.scroller;
+          if (s) {
+            const canBack = s.scrollLeft > 0;
+            const canForward = s.scrollLeft < s.scrollWidth - s.clientWidth - 1;
+            if ((dx > 0 && canBack) || (dx < 0 && canForward)) { g.native = true; return; }
+          }
+          const el = contentRef.current;
+          if (el) { el.style.transition = "none"; el.style.willChange = "transform"; }
+        } else { g.axis = "y"; return; }
       }
-      const target = TAB_ORDER[idx + (goNext ? 1 : -1)];
-      setTimeout(() => goTab(target, goNext ? "next" : "prev"), 110);
-    } else {
-      resetContent();
-    }
-  }
+      if (g.axis !== "x") return;
+      if (e.cancelable) e.preventDefault();
+      g.dx = dx;
+      if (!g.raf) g.raf = requestAnimationFrame(applyMove);
+    };
+    const onEnd = () => {
+      const cur = g;
+      g = null;
+      if (cur && cur.raf) cancelAnimationFrame(cur.raf);
+      if (!cur || cur.axis !== "x" || cur.native) { clearStyles(); return; }
+      const idx = TAB_ORDER.indexOf(tabRef.current);
+      const goNext = cur.dx < 0 && idx < TAB_ORDER.length - 1;
+      const goPrev = cur.dx > 0 && idx > 0;
+      const quick = Date.now() - cur.t0 < 300 && Math.abs(cur.dx) > 40;
+      const far = Math.abs(cur.dx) > Math.min(90, window.innerWidth * 0.2);
+      if ((goNext || goPrev) && (far || quick)) {
+        const el = contentRef.current;
+        if (el) {
+          el.style.transition = "transform 120ms ease-out, opacity 120ms ease-out";
+          el.style.transform = "translate3d(" + (goNext ? "-" : "") + "50px,0,0)";
+          el.style.opacity = "0";
+        }
+        const target = TAB_ORDER[idx + (goNext ? 1 : -1)];
+        setTimeout(() => { setSlideDir(goNext ? "next" : "prev"); setTab(target); }, 110);
+      } else {
+        snapBack();
+      }
+    };
+    const onCancel = () => {
+      const cur = g;
+      g = null;
+      if (cur && cur.raf) cancelAnimationFrame(cur.raf);
+      if (cur && cur.axis === "x" && !cur.native) snapBack(); else clearStyles();
+    };
+
+    root.addEventListener("touchstart", onStart, { passive: true });
+    root.addEventListener("touchmove", onMove, { passive: false });
+    root.addEventListener("touchend", onEnd, { passive: true });
+    root.addEventListener("touchcancel", onCancel, { passive: true });
+    return () => {
+      root.removeEventListener("touchstart", onStart);
+      root.removeEventListener("touchmove", onMove);
+      root.removeEventListener("touchend", onEnd);
+      root.removeEventListener("touchcancel", onCancel);
+    };
+  }, [loaded, loadFailed]);
 
   if (!loaded) return <div className="loading-screen">Caricamento...</div>;
   if (loadFailed) return <div className="loading-screen">Impossibile connettersi al database.</div>;
@@ -1194,8 +1221,7 @@ export default function App() {
         <div className={"gt-nav-item" + (tab === "forza" ? " active" : "")} onClick={() => selectTab("forza")}>Analisi della Forza</div>
       </div>
 
-      <div className={"gt-main" + (tab === "settimana" ? " gt-main-settimana" : "")}
-        onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchCancel}>
+      <div ref={mainRef} className={"gt-main" + (tab === "settimana" ? " gt-main-settimana" : "")}>
         <div key={tab} ref={contentRef} className={"swipe-content swipe-in-" + slideDir}>
           {tab === "muscoli" && !activeMuscle && <MuscoliTab onSelectMuscle={setActiveMuscle} />}
           {tab === "muscoli" && activeMuscle && (
