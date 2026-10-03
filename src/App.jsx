@@ -916,26 +916,109 @@ export default function App() {
   }, [workouts, loaded, loadFailed]);
 
   const TAB_ORDER = ["muscoli", "settimana", "serie", "forza"];
-  const touchStartRef = React.useRef(null);
-  const SWIPE_SKIP_SELECTOR = ".set-table, .promemoria-grid, .mode-btn-row, .gt-nav, input, select, button, textarea, .history-cards-grid, .group-ex-list";
+  const gestureRef = React.useRef(null);
+  const contentRef = React.useRef(null);
+  const [slideDir, setSlideDir] = useState("none");
+  const SWIPE_SKIP_SELECTOR = "input, select, textarea, .settimana-popup-overlay";
+
+  function goTab(next, dir) {
+    setSlideDir(dir);
+    setTab(next);
+  }
+  function selectTab(next) {
+    const from = TAB_ORDER.indexOf(tab);
+    const to = TAB_ORDER.indexOf(next);
+    if (next !== tab) goTab(next, to > from ? "next" : "prev");
+    if (next === "muscoli") setActiveMuscle(null);
+  }
+  // Cerca l'elemento scorrevole in orizzontale più vicino al punto toccato.
+  function findHScroller(el) {
+    while (el && el !== document.body) {
+      if (el.scrollWidth > el.clientWidth + 1) {
+        const ox = getComputedStyle(el).overflowX;
+        if (ox === "auto" || ox === "scroll") return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+  function resetContent(delay) {
+    const el = contentRef.current;
+    if (!el) return;
+    el.style.transition = "transform 180ms ease-out, opacity 180ms ease-out";
+    el.style.transform = "translate3d(0,0,0)";
+    el.style.opacity = "1";
+    setTimeout(() => {
+      if (gestureRef.current) return;
+      const cur = contentRef.current;
+      if (cur) { cur.style.transition = ""; cur.style.transform = ""; cur.style.opacity = ""; }
+    }, delay || 200);
+  }
 
   function handleTouchStart(e) {
-    if (e.target.closest(SWIPE_SKIP_SELECTOR)) { touchStartRef.current = null; return; }
+    if (e.touches.length !== 1 || e.target.closest(SWIPE_SKIP_SELECTOR)) { gestureRef.current = null; return; }
     const t = e.touches[0];
-    touchStartRef.current = { x: t.clientX, y: t.clientY };
+    gestureRef.current = { x: t.clientX, y: t.clientY, t0: Date.now(), axis: null, native: false, dx: 0, scroller: findHScroller(e.target) };
+    const el = contentRef.current;
+    if (el) el.style.transition = "none";
   }
-  function handleTouchEnd(e) {
-    const start = touchStartRef.current;
-    touchStartRef.current = null;
-    if (!start) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  function handleTouchMove(e) {
+    const g = gestureRef.current;
+    if (!g || g.native) return;
+    const t = e.touches[0];
+    const dx = t.clientX - g.x;
+    const dy = t.clientY - g.y;
+    if (!g.axis) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dx) > Math.abs(dy) * 1.2) {
+        g.axis = "x";
+        const s = g.scroller;
+        if (s) {
+          const canBack = s.scrollLeft > 0;
+          const canForward = s.scrollLeft < s.scrollWidth - s.clientWidth - 1;
+          if ((dx > 0 && canBack) || (dx < 0 && canForward)) { g.native = true; return; }
+        }
+      } else { g.axis = "y"; return; }
+    }
+    if (g.axis !== "x") return;
+    g.dx = dx;
     const idx = TAB_ORDER.indexOf(tab);
-    if (idx === -1) return;
-    if (dx < 0 && idx < TAB_ORDER.length - 1) setTab(TAB_ORDER[idx + 1]);
-    else if (dx > 0 && idx > 0) setTab(TAB_ORDER[idx - 1]);
+    const blocked = (dx > 0 && idx <= 0) || (dx < 0 && idx >= TAB_ORDER.length - 1);
+    const el = contentRef.current;
+    if (el) el.style.transform = "translate3d(" + (dx * (blocked ? 0.15 : 0.5)) + "px,0,0)";
+  }
+  function handleTouchCancel() {
+    const g = gestureRef.current;
+    gestureRef.current = null;
+    if (g && g.axis === "x" && !g.native) { resetContent(); return; }
+    const cur = contentRef.current;
+    if (cur) { cur.style.transition = ""; cur.style.transform = ""; cur.style.opacity = ""; }
+  }
+  function handleTouchEnd() {
+    const g = gestureRef.current;
+    gestureRef.current = null;
+    if (!g || g.axis !== "x" || g.native) {
+      const cur = contentRef.current;
+      if (cur) { cur.style.transition = ""; cur.style.transform = ""; cur.style.opacity = ""; }
+      return;
+    }
+    const idx = TAB_ORDER.indexOf(tab);
+    const goNext = g.dx < 0 && idx < TAB_ORDER.length - 1;
+    const goPrev = g.dx > 0 && idx > 0;
+    const quick = Date.now() - g.t0 < 300 && Math.abs(g.dx) > 40;
+    const far = Math.abs(g.dx) > Math.min(90, window.innerWidth * 0.2);
+    if ((goNext || goPrev) && (far || quick)) {
+      const el = contentRef.current;
+      if (el) {
+        el.style.transition = "transform 120ms ease-out, opacity 120ms ease-out";
+        el.style.transform = "translate3d(" + (goNext ? "-" : "") + "50px,0,0)";
+        el.style.opacity = "0";
+      }
+      const target = TAB_ORDER[idx + (goNext ? 1 : -1)];
+      setTimeout(() => goTab(target, goNext ? "next" : "prev"), 110);
+    } else {
+      resetContent();
+    }
   }
 
   if (!loaded) return <div className="loading-screen">Caricamento...</div>;
@@ -960,7 +1043,12 @@ export default function App() {
         .gt-nav{ display:flex; gap:8px; padding:10px 18px; background:var(--surface); border-bottom:1px solid var(--border-c); }
         .gt-nav-item{ display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:700; color:var(--text-dim); font-size:14px; }
         .gt-nav-item.active{ background:#e8f0f5; color:var(--accent); }
-        .gt-main{ padding:16px; max-width:640px; margin:0 auto; }
+        .gt-main{ padding:16px; max-width:640px; margin:0 auto; touch-action:pan-y pinch-zoom; overflow-x:hidden; overflow-x:clip; }
+        .swipe-in-next{ animation:swipeInNext 200ms ease-out; }
+        .swipe-in-prev{ animation:swipeInPrev 200ms ease-out; }
+        @keyframes swipeInNext{ from{ opacity:0; transform:translate3d(50px,0,0); } to{ opacity:1; transform:translate3d(0,0,0); } }
+        @keyframes swipeInPrev{ from{ opacity:0; transform:translate3d(-50px,0,0); } to{ opacity:1; transform:translate3d(0,0,0); } }
+        @media (prefers-reduced-motion: reduce){ .swipe-in-next, .swipe-in-prev{ animation:none; } }
         .card{ background:var(--surface); border:1px solid var(--border-c); border-radius:10px; padding:16px; }
         .section-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
         .section-title{ font-size:18px; margin:0; font-weight:700; color:var(--text); }
@@ -1086,7 +1174,7 @@ export default function App() {
           .chart-uniform-wrap > div[style]{ height:260px !important; }
           .input-kg, .input-rip, .input-rir, .input-discs, .input-note,
           .box-kg, .box-rip, .box-rir, .box-discs, .box-note{ min-height:44px; box-sizing:border-box; }
-          .gt-main{ padding:10px; }
+          .gt-main{ padding:10px; min-height:75vh; }
           .set-row{ grid-template-columns:18px 130px 50px 44px 70px 50px 200px 22px; min-width:640px; }
           .set-table{ overflow-x:auto; }
           .promemoria-grid{ grid-template-columns:repeat(7, 118px); overflow-x:auto; padding-bottom:6px; }
@@ -1100,23 +1188,26 @@ export default function App() {
       </div>
 
       <div className="gt-nav">
-        <div className={"gt-nav-item" + (tab === "muscoli" ? " active" : "")} onClick={() => { setTab("muscoli"); setActiveMuscle(null); }}>Muscoli</div>
-        <div className={"gt-nav-item" + (tab === "settimana" ? " active" : "")} onClick={() => setTab("settimana")}>Settimana</div>
-        <div className={"gt-nav-item" + (tab === "serie" ? " active" : "")} onClick={() => setTab("serie")}>Serie Settimanali</div>
-        <div className={"gt-nav-item" + (tab === "forza" ? " active" : "")} onClick={() => setTab("forza")}>Analisi della Forza</div>
+        <div className={"gt-nav-item" + (tab === "muscoli" ? " active" : "")} onClick={() => selectTab("muscoli")}>Muscoli</div>
+        <div className={"gt-nav-item" + (tab === "settimana" ? " active" : "")} onClick={() => selectTab("settimana")}>Settimana</div>
+        <div className={"gt-nav-item" + (tab === "serie" ? " active" : "")} onClick={() => selectTab("serie")}>Serie Settimanali</div>
+        <div className={"gt-nav-item" + (tab === "forza" ? " active" : "")} onClick={() => selectTab("forza")}>Analisi della Forza</div>
       </div>
 
-      <div className={"gt-main" + (tab === "settimana" ? " gt-main-settimana" : "")} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        {tab === "muscoli" && !activeMuscle && <MuscoliTab onSelectMuscle={setActiveMuscle} />}
-        {tab === "muscoli" && activeMuscle && (
-          <div className="col" style={{ gap: 12 }}>
-            <button className="btn btn-ghost" style={{ width: "fit-content" }} onClick={() => setActiveMuscle(null)}><ChevronLeft size={18} /> Torna ai muscoli</button>
-            <MuscleScreen muscle={activeMuscle} exercises={exercises} setExercises={setExercises} workouts={workouts} setWorkouts={setWorkouts} />
-          </div>
-        )}
-        {tab === "settimana" && <AllenamentiTab workouts={workouts} exercises={exercises} />}
-        {tab === "serie" && <SerieSettimanaliTab workouts={workouts} exercises={exercises} />}
-        {tab === "forza" && <AnalisiForzaTab workouts={workouts} exercises={exercises} />}
+      <div className={"gt-main" + (tab === "settimana" ? " gt-main-settimana" : "")}
+        onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchCancel}>
+        <div key={tab} ref={contentRef} className={"swipe-content swipe-in-" + slideDir}>
+          {tab === "muscoli" && !activeMuscle && <MuscoliTab onSelectMuscle={setActiveMuscle} />}
+          {tab === "muscoli" && activeMuscle && (
+            <div className="col" style={{ gap: 12 }}>
+              <button className="btn btn-ghost" style={{ width: "fit-content" }} onClick={() => setActiveMuscle(null)}><ChevronLeft size={18} /> Torna ai muscoli</button>
+              <MuscleScreen muscle={activeMuscle} exercises={exercises} setExercises={setExercises} workouts={workouts} setWorkouts={setWorkouts} />
+            </div>
+          )}
+          {tab === "settimana" && <AllenamentiTab workouts={workouts} exercises={exercises} />}
+          {tab === "serie" && <SerieSettimanaliTab workouts={workouts} exercises={exercises} />}
+          {tab === "forza" && <AnalisiForzaTab workouts={workouts} exercises={exercises} />}
+        </div>
       </div>
     </div>
   );
