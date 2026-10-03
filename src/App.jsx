@@ -950,7 +950,7 @@ export default function App() {
           --bg:#F7F7F5; --surface:#FFFFFF; --surface-2:#F0F0EE; --border-c:#DDDDD8;
           --text:#1a1a1a; --text-dim:#6b6b66; --accent:#3E7191;
           background:var(--bg); color:var(--text); font-family:'Comfortaa','Segoe UI',Candara,Arial,sans-serif;
-          min-height:100vh;
+          min-height:100vh; text-transform:uppercase;
         }
         .loading-screen{ min-height:100vh; display:flex; align-items:center; justify-content:center; font-family:'Comfortaa',sans-serif; color:#6b6b66; }
         .col{ display:flex; flex-direction:column; }
