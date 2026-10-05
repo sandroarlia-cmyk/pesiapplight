@@ -7,6 +7,9 @@ import {
   getDoc,
   setDoc,
   deleteDoc,
+  query,
+  where,
+  documentId,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -91,5 +94,47 @@ export async function saveConfigDoc(exercises, splits) {
     await setDoc(doc(db, CONFIG_DOC), { exercises, splits });
   } catch (error) {
     console.error("Errore nel salvataggio configurazione:", error.message);
+  }
+}
+
+// ---------- Scheda Allenamento (blocchetti) ----------
+// Ogni blocchetto è un documento a sé in app_config, con id "plan_<id>":
+// due dispositivi che modificano blocchi diversi non possono sovrascriversi
+// e le regole di sicurezza esistenti (app_config/{docId}) bastano.
+const PLAN_PREFIX = "plan_";
+
+// Ritorna la lista dei blocchi, oppure null se la lettura fallisce.
+export async function loadPlanBlocks() {
+  try {
+    const q = query(
+      collection(db, "app_config"),
+      where(documentId(), ">=", PLAN_PREFIX),
+      where(documentId(), "<", "plan`")
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => d.data());
+  } catch (error) {
+    console.error("Errore nel caricamento della scheda:", error.message);
+    return null;
+  }
+}
+
+export async function savePlanBlock(block) {
+  try {
+    await setDoc(doc(db, "app_config", PLAN_PREFIX + block.id), block);
+    return true;
+  } catch (error) {
+    console.error("Errore nel salvataggio del blocco:", error.message);
+    return false;
+  }
+}
+
+export async function deletePlanBlock(id) {
+  try {
+    await deleteDoc(doc(db, "app_config", PLAN_PREFIX + id));
+    return true;
+  } catch (error) {
+    console.error("Errore nella cancellazione del blocco:", error.message);
+    return false;
   }
 }

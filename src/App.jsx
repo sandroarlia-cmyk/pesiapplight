@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Dumbbell, Plus, Trash2, Search, X, ChevronRight, ChevronLeft, Save } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
-import { loadGymData, saveWorkoutDoc, deleteWorkoutDoc, saveConfigDoc } from "./firebaseClient";
+import { loadGymData, saveWorkoutDoc, deleteWorkoutDoc, saveConfigDoc, loadPlanBlocks, savePlanBlock, deletePlanBlock } from "./firebaseClient";
 
 // ---------- Dati di base (identici all'app principale) ----------
 
@@ -604,22 +604,126 @@ function MuscoliTab({ onSelectMuscle }) {
 
 // ---------- Scheda Allenamento: programmazione degli esercizi (blocchetti) ----------
 
-const PLAN_KEY = "gym-lite-scheda";
+const PLAN_KEY_V2 = "gym-lite-scheda-v2";
+const PLAN_KEY_OLD = "gym-lite-scheda";
+const PLAN_FIELDS = ["id", "day", "muscle", "exercise", "serie", "kg", "rep", "rir", "note", "createdAt"];
+
+// Un colore acceso per ogni giorno (stesso ordine di DAYS: lunedì … domenica)
+const DAY_PALETTE = [
+  { bg: "#e63946", fg: "#ffffff" },
+  { bg: "#f77f00", fg: "#ffffff" },
+  { bg: "#ffd60a", fg: "#1a1a1a" },
+  { bg: "#2e9e4f", fg: "#ffffff" },
+  { bg: "#1e88e5", fg: "#ffffff" },
+  { bg: "#8e44ad", fg: "#ffffff" },
+  { bg: "#e91e8c", fg: "#ffffff" }
+];
+const DAY_COLORS = {};
+DAYS.forEach((d, i) => { DAY_COLORS[d] = DAY_PALETTE[i]; });
+
+// Colori dei muscoli chiari e tenui, solo per questa scheda
+const MUSCLE_SOFT_COLORS = {
+  Petto: "#f4c7c3", Spalle: "#f6dca8", Dorso: "#c4d4f0", Gambe: "#e6e6a8",
+  Bicipiti: "#f6cdb8", Tricipiti: "#b8e3e3", Calisthenics: "#f1c1d9", Addome: "#cfd6df"
+};
 
 function newPlanBlock(day, muscle) {
   return {
     id: uid(), day: day || dayNameFromDate(todayISO()), muscle: muscle || "",
-    exercise: "", serie: "", kg: "", rep: "", rir: "", note: ""
+    exercise: "", serie: "", kg: "", rep: "", rir: "", note: "", createdAt: Date.now()
   };
+}
+function normBlock(b) {
+  return {
+    id: b.id || uid(),
+    day: DAYS.includes(b.day) ? b.day : dayNameFromDate(todayISO()),
+    muscle: MUSCLE_GROUPS.includes(b.muscle) ? b.muscle : "",
+    exercise: String(b.exercise ?? ""), serie: String(b.serie ?? ""), kg: String(b.kg ?? ""),
+    rep: String(b.rep ?? ""), rir: String(b.rir ?? ""), note: String(b.note ?? ""),
+    createdAt: Number(b.createdAt) || 0
+  };
+}
+// Forma canonica per confrontare due versioni dello stesso blocco
+function canonBlock(b) { return JSON.stringify(PLAN_FIELDS.map((f) => b[f])); }
+function isBlankBlock(b) { return !b.exercise && !b.serie && !b.kg && !b.rep && !b.rir && !b.note && !b.muscle; }
+function byCreated(a, b) { return (a.createdAt - b.createdAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); }
+
+// state = { blocks, synced }; synced = ultima versione (canonica) di ogni blocco confermata online.
+function loadInitialPlan() {
+  try {
+    const rawV2 = localStorage.getItem(PLAN_KEY_V2);
+    if (rawV2) {
+      const p = JSON.parse(rawV2);
+      if (p && Array.isArray(p.blocks)) {
+        const blocks = p.blocks.map(normBlock);
+        return { blocks: blocks.length ? blocks : [newPlanBlock()], synced: p.synced && typeof p.synced === "object" ? p.synced : {} };
+      }
+    }
+    // Formato precedente (solo su questo dispositivo): lo importo, verrà caricato online al primo salvataggio
+    const rawOld = localStorage.getItem(PLAN_KEY_OLD);
+    if (rawOld) {
+      const parsed = JSON.parse(rawOld);
+      const arr = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" ? [parsed] : []);
+      if (arr.length) {
+        const base = Date.now() - 100000;
+        return { blocks: arr.map((b, i) => normBlock({ ...b, createdAt: b.createdAt || base + i })), synced: {} };
+      }
+    }
+  } catch { /* dati non leggibili: si riparte da un blocco vuoto */ }
+  return { blocks: [newPlanBlock()], synced: {} };
+}
+
+// Unisce i blocchi online con quelli locali senza mai sovrascrivere modifiche non ancora salvate.
+function mergePlan(state, remoteBlocks) {
+  const remoteMap = new Map(remoteBlocks.map((r) => [r.id, r]));
+  const synced = { ...state.synced };
+  const out = [];
+  const localIds = new Set();
+  for (const L of state.blocks) {
+    localIds.add(L.id);
+    const sj = synced[L.id];
+    const dirty = sj === undefined || canonBlock(L) !== sj;
+    const R = remoteMap.get(L.id);
+    if (R) {
+      if (!dirty && canonBlock(R) !== sj) { out.push(R); synced[L.id] = canonBlock(R); }
+      else out.push(L);
+    } else if (sj !== undefined && !dirty) {
+      delete synced[L.id]; // cancellato da un altro dispositivo
+    } else {
+      out.push(L);
+    }
+  }
+  for (const R of remoteBlocks) {
+    if (localIds.has(R.id)) continue;
+    if (synced[R.id] !== undefined) continue; // cancellato qui, in attesa di essere rimosso online
+    out.push(R);
+    synced[R.id] = canonBlock(R);
+  }
+  out.sort(byCreated);
+  const same = out.length === state.blocks.length && out.every((b, i) => b === state.blocks[i])
+    && JSON.stringify(synced) === JSON.stringify(state.synced);
+  return same ? state : { blocks: out, synced };
+}
+
+function applyPlanMarks(synced, ops, results) {
+  const next = { ...synced };
+  ops.forEach((op, i) => {
+    if (!results[i]) return;
+    if (op.kind === "save") next[op.id] = op.json; else delete next[op.id];
+  });
+  return next;
 }
 
 const PlanBlock = React.memo(function PlanBlock({ block, onChange, onDelete }) {
-  const mc = block.muscle ? MUSCLE_DARK_COLORS[block.muscle] : null;
+  const dc = DAY_COLORS[block.day] || DAY_PALETTE[0];
+  const soft = block.muscle ? MUSCLE_SOFT_COLORS[block.muscle] : null;
   return (
-    <div className="plan-block">
+    <div className="plan-block" style={{ borderLeftColor: dc.bg }}>
       <div className="card plan-line">
         <h2 className="section-title">Settimana</h2>
-        <select className="input plan-select" value={block.day} onChange={(e) => onChange(block.id, "day", e.target.value)}>
+        <select className="input plan-select" value={block.day}
+          style={{ background: dc.bg, color: dc.fg, borderColor: dc.bg }}
+          onChange={(e) => onChange(block.id, "day", e.target.value)}>
           {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
         <DeleteButton small onConfirm={() => onDelete(block.id)} />
@@ -628,7 +732,7 @@ const PlanBlock = React.memo(function PlanBlock({ block, onChange, onDelete }) {
       <div className="card plan-line">
         <h2 className="section-title">Muscoli</h2>
         <select className="input plan-select" value={block.muscle}
-          style={mc ? { background: mc, color: "#ffffff", borderColor: mc } : undefined}
+          style={soft ? { background: soft, color: "#1a1a1a", borderColor: soft } : undefined}
           onChange={(e) => onChange(block.id, "muscle", e.target.value)}>
           <option value="">—</option>
           {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -669,38 +773,113 @@ const PlanBlock = React.memo(function PlanBlock({ block, onChange, onDelete }) {
 });
 
 function SchedaAllenamentoTab() {
-  const [blocks, setBlocks] = useState(() => {
-    try {
-      const raw = localStorage.getItem(PLAN_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) return parsed.map((b) => ({ ...newPlanBlock(), ...b, id: b.id || uid() }));
-        // formato precedente: un solo blocco salvato come oggetto
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return [{ ...newPlanBlock(), ...parsed }];
-      }
-    } catch { /* dati non leggibili: si riparte da un blocco vuoto */ }
-    return [newPlanBlock()];
-  });
+  const [plan, setPlan] = useState(loadInitialPlan);
+  const [status, setStatus] = useState("idle"); // idle | saving | ok | error
+  const [lastOk, setLastOk] = useState(null);
+  const stateRef = React.useRef(plan);
+  stateRef.current = plan;
+  const syncingRef = React.useRef(false);
+  const rerunRef = React.useRef(false);
 
+  // Copia locale immediata (funziona anche offline)
   useEffect(() => {
-    try { localStorage.setItem(PLAN_KEY, JSON.stringify(blocks)); } catch { /* storage non disponibile */ }
-  }, [blocks]);
+    try { localStorage.setItem(PLAN_KEY_V2, JSON.stringify(plan)); } catch { /* storage non disponibile */ }
+  }, [plan]);
+
+  // Invia online SOLO i blocchi cambiati (e cancella solo quelli tolti da qui)
+  const runSync = React.useCallback(async () => {
+    if (syncingRef.current) { rerunRef.current = true; return true; }
+    syncingRef.current = true;
+    let allOk = true;
+    try {
+      do {
+        rerunRef.current = false;
+        const { blocks, synced } = stateRef.current;
+        const ops = [];
+        for (const b of blocks) {
+          const json = canonBlock(b);
+          if (synced[b.id] === json) continue;
+          if (synced[b.id] === undefined && isBlankBlock(b)) continue;
+          ops.push({ kind: "save", id: b.id, block: b, json });
+        }
+        for (const id of Object.keys(synced)) {
+          if (!blocks.some((b) => b.id === id)) ops.push({ kind: "del", id });
+        }
+        if (!ops.length) continue;
+        setStatus("saving");
+        const results = await Promise.all(ops.map((op) => (op.kind === "save" ? savePlanBlock(op.block) : deletePlanBlock(op.id))));
+        stateRef.current = { ...stateRef.current, synced: applyPlanMarks(stateRef.current.synced, ops, results) };
+        setPlan((s) => ({ ...s, synced: applyPlanMarks(s.synced, ops, results) }));
+        if (results.some((r) => !r)) { allOk = false; setStatus("error"); break; }
+        setStatus("ok");
+        setLastOk(new Date());
+      } while (rerunRef.current);
+    } finally {
+      syncingRef.current = false;
+    }
+    return allOk;
+  }, []);
+
+  // Scarica i blocchi online e li unisce a quelli locali
+  const pull = React.useCallback(async () => {
+    const remote = await loadPlanBlocks();
+    if (remote === null) return false;
+    setPlan((s) => mergePlan(s, remote.map(normBlock)));
+    return true;
+  }, []);
+
+  // Salvataggio automatico dopo ogni modifica
+  useEffect(() => {
+    const t = setTimeout(() => { runSync(); }, 900);
+    return () => clearTimeout(t);
+  }, [plan.blocks, runSync]);
+
+  // Aggiornamento all'apertura e quando si torna sull'app
+  useEffect(() => {
+    pull();
+    const onVisible = () => { if (document.visibilityState === "visible") pull(); };
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [pull]);
+
+  async function saveAll() {
+    setStatus("saving");
+    const ok1 = await runSync();
+    const ok2 = await pull();
+    const ok = ok1 && ok2;
+    setStatus(ok ? "ok" : "error");
+    if (ok) setLastOk(new Date());
+  }
 
   const update = React.useCallback((id, field, value) => {
-    setBlocks((bs) => bs.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
+    setPlan((s) => ({ ...s, blocks: s.blocks.map((b) => (b.id === id ? { ...b, [field]: value } : b)) }));
   }, []);
   const remove = React.useCallback((id) => {
-    setBlocks((bs) => bs.filter((b) => b.id !== id));
+    setPlan((s) => ({ ...s, blocks: s.blocks.filter((b) => b.id !== id) }));
   }, []);
   function addBlock() {
-    setBlocks((bs) => {
-      const last = bs[bs.length - 1];
-      return [...bs, newPlanBlock(last ? last.day : undefined, last ? last.muscle : "")];
+    setPlan((s) => {
+      const last = s.blocks[s.blocks.length - 1];
+      return { ...s, blocks: [...s.blocks, newPlanBlock(last ? last.day : undefined, last ? last.muscle : "")] };
     });
   }
 
+  const blocks = plan.blocks;
+  const hhmm = lastOk ? lastOk.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) : "";
+  const statusText = status === "saving" ? "Salvataggio…"
+    : status === "ok" ? "Salvato" + (hhmm ? " alle " + hhmm : "")
+    : status === "error" ? "Non sincronizzato: riprova" : "";
+
   return (
     <div className="col" style={{ gap: 14 }}>
+      <div className="plan-topbar">
+        <button className="btn btn-primary" onClick={saveAll} disabled={status === "saving"}><Save size={18} /> Salva</button>
+        <span className={"plan-status " + status}>{statusText}</span>
+      </div>
       {blocks.map((b) => <PlanBlock key={b.id} block={b} onChange={update} onDelete={remove} />)}
       <div className="row" style={{ gap: 10 }}>
         <button className="btn btn-primary" onClick={addBlock}><Plus size={18} /> Aggiungi blocco</button>
@@ -1223,7 +1402,11 @@ export default function App() {
         .group-ex-list{ display:flex; flex-direction:column; gap:4px; }
         .group-ex-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:15px; background:#E6ECF2; border:1px solid var(--border-c); }
         .group-ex-row-done span{ font-weight:700; color:#c0392b; }
-        .plan-block{ display:flex; flex-direction:column; gap:6px; padding-bottom:14px; border-bottom:2px solid var(--border-c); }
+        .plan-block{ display:flex; flex-direction:column; gap:6px; padding:0 0 14px 8px; border-bottom:2px solid var(--border-c); border-left:6px solid var(--border-c); }
+        .plan-topbar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .plan-status{ font-size:13px; font-weight:700; color:var(--text); }
+        .plan-status.ok{ color:#1f6b3a; }
+        .plan-status.error{ color:#c0392b; }
         .card.plan-line{ display:flex; align-items:center; gap:10px; padding:5px 10px; }
         .plan-line .section-title{ font-size:14px; flex:0 0 92px; white-space:nowrap; }
         .plan-select{ width:auto; flex:1 1 auto; min-width:0; font-size:16px; font-weight:700; }
