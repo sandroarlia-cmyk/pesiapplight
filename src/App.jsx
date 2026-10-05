@@ -10,7 +10,7 @@ const DAYS = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Saba
 const MONTHS_IT = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
 const RECUPERO_OPTIONS = ["30 sec", "1 min", "1,5 min", "2 min", "2,5 min", "3 min"];
 
-const TAB_ORDER = ["muscoli", "settimana", "serie", "forza"];
+const TAB_ORDER = ["muscoli", "scheda", "settimana", "serie", "forza"];
 const SWIPE_SKIP_SELECTOR = "input, select, textarea, .settimana-popup-overlay";
 
 // Cerca l'elemento scorrevole in orizzontale più vicino al punto toccato.
@@ -602,6 +602,74 @@ function MuscoliTab({ onSelectMuscle }) {
   );
 }
 
+// ---------- Scheda Allenamento: programmazione degli esercizi ----------
+
+const PLAN_KEY = "gym-lite-scheda";
+
+function SchedaAllenamentoTab() {
+  const [plan, setPlan] = useState(() => {
+    const base = { day: dayNameFromDate(todayISO()), muscle: "", exercise: "", serie: "", kg: "", rep: "", rir: "", note: "" };
+    try {
+      const raw = localStorage.getItem(PLAN_KEY);
+      return raw ? { ...base, ...JSON.parse(raw) } : base;
+    } catch { return base; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(PLAN_KEY, JSON.stringify(plan)); } catch { /* storage non disponibile */ }
+  }, [plan]);
+  const set = (field, value) => setPlan((p) => ({ ...p, [field]: value }));
+
+  return (
+    <div className="col" style={{ gap: 14 }}>
+      <div className="card plan-week">
+        <h2 className="section-title">Settimana</h2>
+        <select className="input plan-select" value={plan.day} onChange={(e) => set("day", e.target.value)}>
+          {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+      </div>
+
+      <div className="card">
+        <h2 className="section-title" style={{ marginBottom: 10 }}>Muscoli</h2>
+        <div className={"plan-tiles" + (plan.muscle ? " has-sel" : "")}>
+          {MUSCLE_GROUPS.map((m) => (
+            <div key={m} className={"plan-tile" + (plan.muscle === m ? " sel" : "")}
+              style={{ background: MUSCLE_DARK_COLORS[m] }}
+              onClick={() => set("muscle", plan.muscle === m ? "" : m)}>{m}</div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
+        <h2 className="section-title" style={{ marginBottom: 10 }}>Esercizio</h2>
+        <input className="input plan-exercise" placeholder="Es. Panca inclinata" value={plan.exercise} onChange={(e) => set("exercise", e.target.value)} />
+      </div>
+
+      <div className="plan-row">
+        <div className="plan-box plan-sq">
+          <span className="plan-label">Serie</span>
+          <input className="plan-input" type="number" inputMode="numeric" value={plan.serie} onChange={(e) => set("serie", e.target.value)} />
+        </div>
+        <div className="plan-box plan-kg">
+          <span className="plan-label">Kg</span>
+          <input className="plan-input" type="number" inputMode="decimal" step="any" value={plan.kg} onChange={(e) => set("kg", e.target.value)} />
+        </div>
+        <div className="plan-box plan-sq plan-rep">
+          <span className="plan-label">Rep</span>
+          <input className="plan-input" type="number" inputMode="numeric" value={plan.rep} onChange={(e) => set("rep", e.target.value)} />
+        </div>
+        <div className="plan-box plan-sq">
+          <span className="plan-label">RIR</span>
+          <input className="plan-input" type="number" inputMode="numeric" value={plan.rir} onChange={(e) => set("rir", e.target.value)} />
+        </div>
+        <div className="plan-box plan-notebox">
+          <span className="plan-label">Note</span>
+          <textarea className="plan-input plan-note" value={plan.note} onChange={(e) => set("note", e.target.value)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------- Serie Settimanali: unico modulo, identico all'app principale ----------
 
 function SerieSettimanaliTab({ workouts, exercises }) {
@@ -1115,6 +1183,24 @@ export default function App() {
         .group-ex-list{ display:flex; flex-direction:column; gap:4px; }
         .group-ex-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:15px; background:#E6ECF2; border:1px solid var(--border-c); }
         .group-ex-row-done span{ font-weight:700; color:#c0392b; }
+        .plan-week{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .plan-week .section-title{ white-space:nowrap; }
+        .plan-select{ width:auto; flex:1 1 150px; max-width:260px; font-size:16px; font-weight:700; }
+        .plan-exercise{ font-size:17px; font-weight:700; }
+        .plan-tiles{ display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:8px; }
+        .plan-tile{ color:#fff; font-weight:700; font-size:13px; text-align:center; padding:12px 6px; border-radius:8px; cursor:pointer; }
+        .plan-tile.sel{ box-shadow:0 0 0 3px #1a1a1a; }
+        .plan-tiles.has-sel .plan-tile:not(.sel){ opacity:.5; }
+        .plan-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+        .plan-box{ height:88px; box-sizing:border-box; border-radius:10px; padding:8px 6px; display:flex; flex-direction:column; background:#ffffff; color:#1a1a1a; border:1px solid var(--border-c); flex:0 0 auto; }
+        .plan-sq{ width:88px; }
+        .plan-kg{ width:116px; background:#8b1a1a; color:#ffffff; border-color:#8b1a1a; }
+        .plan-rep{ background:#aef000; color:#000000; border-color:#aef000; }
+        .plan-notebox{ flex:1 0 190px; min-width:190px; }
+        .plan-label{ font-size:11px; font-weight:700; text-align:center; }
+        .plan-input{ flex:1; width:100%; min-height:0; border:none; background:transparent; color:inherit; font-family:inherit; font-size:30px; font-weight:700; text-align:center; outline:none; padding:0; -moz-appearance:textfield; appearance:textfield; }
+        .plan-input::-webkit-outer-spin-button, .plan-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+        .plan-note{ font-size:16px; text-align:left; resize:none; line-height:1.25; margin-top:2px; }
         .dates-count-btn{ display:flex; align-items:center; gap:4px; background:#ffffff; border:1px solid var(--border-c); color:var(--text); font-weight:700; font-size:13px; padding:6px 10px; border-radius:6px; cursor:pointer; font-family:inherit; }
         .last-time-block{ margin-bottom:10px; }
         .muscoli-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
@@ -1217,6 +1303,7 @@ export default function App() {
 
       <div className="gt-nav">
         <div className={"gt-nav-item" + (tab === "muscoli" ? " active" : "")} onClick={() => selectTab("muscoli")}>Muscoli</div>
+        <div className={"gt-nav-item" + (tab === "scheda" ? " active" : "")} onClick={() => selectTab("scheda")}>Scheda Allenamento</div>
         <div className={"gt-nav-item" + (tab === "settimana" ? " active" : "")} onClick={() => selectTab("settimana")}>Settimana</div>
         <div className={"gt-nav-item" + (tab === "serie" ? " active" : "")} onClick={() => selectTab("serie")}>Serie Settimanali</div>
         <div className={"gt-nav-item" + (tab === "forza" ? " active" : "")} onClick={() => selectTab("forza")}>Analisi della Forza</div>
@@ -1231,6 +1318,7 @@ export default function App() {
               <MuscleScreen muscle={activeMuscle} exercises={exercises} setExercises={setExercises} workouts={workouts} setWorkouts={setWorkouts} />
             </div>
           )}
+          {tab === "scheda" && <SchedaAllenamentoTab />}
           {tab === "settimana" && <AllenamentiTab workouts={workouts} exercises={exercises} />}
           {tab === "serie" && <SerieSettimanaliTab workouts={workouts} exercises={exercises} />}
           {tab === "forza" && <AnalisiForzaTab workouts={workouts} exercises={exercises} />}
