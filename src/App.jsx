@@ -606,6 +606,7 @@ function MuscoliTab({ onSelectMuscle }) {
 
 const PLAN_KEY_V2 = "gym-lite-scheda-v2";
 const PLAN_KEY_OLD = "gym-lite-scheda";
+const PLAN_FILTER_KEY = "gym-lite-scheda-filtro";
 const PLAN_FIELDS = ["id", "day", "muscle", "exercise", "serie", "kg", "rep", "rir", "note", "createdAt"];
 
 // Un colore acceso per ogni giorno (stesso ordine di DAYS: lunedì … domenica)
@@ -777,6 +778,15 @@ function SchedaAllenamentoTab() {
   const [plan, setPlan] = useState(loadInitialPlan);
   const [status, setStatus] = useState("idle"); // idle | saving | ok | error
   const [lastOk, setLastOk] = useState(null);
+  const [filterDay, setFilterDay] = useState(() => {
+    try {
+      const v = localStorage.getItem(PLAN_FILTER_KEY);
+      return v && (v === "all" || DAYS.includes(v)) ? v : "all";
+    } catch { return "all"; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(PLAN_FILTER_KEY, filterDay); } catch { /* storage non disponibile */ }
+  }, [filterDay]);
   const stateRef = React.useRef(plan);
   stateRef.current = plan;
   const syncingRef = React.useRef(false);
@@ -864,12 +874,15 @@ function SchedaAllenamentoTab() {
   }, []);
   function addBlock() {
     setPlan((s) => {
-      const last = s.blocks[s.blocks.length - 1];
-      return { ...s, blocks: [...s.blocks, newPlanBlock(last ? last.day : undefined, last ? last.muscle : "")] };
+      const pool = filterDay === "all" ? s.blocks : s.blocks.filter((b) => b.day === filterDay);
+      const last = pool[pool.length - 1];
+      const day = filterDay === "all" ? (last ? last.day : undefined) : filterDay;
+      return { ...s, blocks: [...s.blocks, newPlanBlock(day, last ? last.muscle : "")] };
     });
   }
 
   const blocks = plan.blocks;
+  const visible = filterDay === "all" ? blocks : blocks.filter((b) => b.day === filterDay);
   const hhmm = lastOk ? lastOk.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) : "";
   const statusText = status === "saving" ? "Salvataggio…"
     : status === "ok" ? "Salvato" + (hhmm ? " alle " + hhmm : "")
@@ -878,13 +891,34 @@ function SchedaAllenamentoTab() {
   return (
     <div className="col" style={{ gap: 14 }}>
       <div className="plan-topbar">
-        <button className="btn btn-primary" onClick={saveAll} disabled={status === "saving"}><Save size={18} /> Salva</button>
-        <span className={"plan-status " + status}>{statusText}</span>
+        <div className="plan-save">
+          <button className="btn btn-primary" onClick={saveAll} disabled={status === "saving"}><Save size={18} /> Salva</button>
+          <span className={"plan-status " + status}>{statusText}</span>
+        </div>
+        <div className="card plan-filter">
+          <div className="plan-filter-title"><Search size={15} /> Cerca</div>
+          <div className="plan-chips">
+            <button className={"plan-chip plan-chip-all" + (filterDay === "all" ? " on" : "")} onClick={() => setFilterDay("all")}>Settimana</button>
+            {DAYS.map((d) => {
+              const c = DAY_COLORS[d];
+              const on = filterDay === d;
+              return (
+                <button key={d} className="plan-chip" onClick={() => setFilterDay(d)}
+                  style={on ? { background: c.bg, color: c.fg, borderColor: c.bg } : { borderColor: c.bg }}>{d}</button>
+              );
+            })}
+          </div>
+        </div>
       </div>
-      {blocks.map((b) => <PlanBlock key={b.id} block={b} onChange={update} onDelete={remove} />)}
+      {visible.map((b) => <PlanBlock key={b.id} block={b} onChange={update} onDelete={remove} />)}
+      {visible.length === 0 && <p className="muted">Nessun blocco per {filterDay === "all" ? "la settimana" : filterDay}.</p>}
       <div className="row" style={{ gap: 10 }}>
         <button className="btn btn-primary" onClick={addBlock}><Plus size={18} /> Aggiungi blocco</button>
-        <span className="hint">{blocks.length} {blocks.length === 1 ? "blocco" : "blocchi"}</span>
+        <span className="hint">
+          {filterDay === "all"
+            ? blocks.length + (blocks.length === 1 ? " blocco" : " blocchi")
+            : visible.length + " di " + blocks.length + " blocchi"}
+        </span>
       </div>
     </div>
   );
@@ -1404,7 +1438,13 @@ export default function App() {
         .group-ex-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:15px; background:#E6ECF2; border:1px solid var(--border-c); }
         .group-ex-row-done span{ font-weight:700; color:#c0392b; }
         .plan-block{ display:flex; flex-direction:column; gap:6px; padding:0 0 14px 8px; border-bottom:2px solid var(--border-c); border-left:6px solid var(--border-c); }
-        .plan-topbar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .plan-topbar{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .plan-save{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .card.plan-filter{ flex:1 1 300px; max-width:480px; margin-left:auto; padding:8px 10px; }
+        .plan-filter-title{ display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700; margin-bottom:6px; }
+        .plan-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+        .plan-chip{ border:2px solid #1a1a1a; background:#ffffff; color:#1a1a1a; border-radius:6px; padding:5px 9px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; }
+        .plan-chip-all.on{ background:#1a1a1a; color:#ffffff; }
         .plan-status{ font-size:13px; font-weight:700; color:var(--text); }
         .plan-status.ok{ color:#1f6b3a; }
         .plan-status.error{ color:#c0392b; }
