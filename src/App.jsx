@@ -717,6 +717,7 @@ function applyPlanMarks(synced, ops, results) {
 const PlanBlock = React.memo(function PlanBlock({ block, onChange, onDelete }) {
   const dc = DAY_COLORS[block.day] || DAY_PALETTE[0];
   const soft = block.muscle ? MUSCLE_SOFT_COLORS[block.muscle] : null;
+  const noWrap = typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
   return (
     <div className="plan-block" style={{ borderLeftColor: dc.bg }}>
       <div className="card plan-line">
@@ -765,7 +766,7 @@ const PlanBlock = React.memo(function PlanBlock({ block, onChange, onDelete }) {
         </div>
         <div className="plan-box plan-notebox">
           <span className="plan-label">Note</span>
-          <textarea className="plan-input plan-note" value={block.note} onChange={(e) => onChange(block.id, "note", e.target.value)} />
+          <textarea className="plan-input plan-note" wrap={noWrap ? "off" : "soft"} value={block.note} onChange={(e) => onChange(block.id, "note", e.target.value)} />
         </div>
       </div>
     </div>
@@ -1499,6 +1500,10 @@ export default function App() {
           .input-kg, .box-kg{ font-size:22px; }
           .group-ex-row span{ font-weight:700; }
           .input-discs, .box-discs{ background:#ffd9d3; font-weight:700; font-size:18px; }
+          .plan-kg{ width:72px; }
+          .plan-kg .plan-input{ font-size:17px; }
+          .plan-notebox{ flex:0 0 320px; min-width:320px; }
+          .plan-note{ font-size:15px; white-space:pre; overflow-x:auto; overflow-y:hidden; }
           .gt-nav{ overflow-x:auto; flex-wrap:nowrap; }
           .gt-nav-item{ flex-shrink:0; white-space:nowrap; }
           .progressi-dark{ padding:10px; border-radius:8px; max-width:100%; box-sizing:border-box; overflow-x:hidden; }
