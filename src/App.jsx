@@ -602,69 +602,109 @@ function MuscoliTab({ onSelectMuscle }) {
   );
 }
 
-// ---------- Scheda Allenamento: programmazione degli esercizi ----------
+// ---------- Scheda Allenamento: programmazione degli esercizi (blocchetti) ----------
 
 const PLAN_KEY = "gym-lite-scheda";
 
-function SchedaAllenamentoTab() {
-  const [plan, setPlan] = useState(() => {
-    const base = { day: dayNameFromDate(todayISO()), muscle: "", exercise: "", serie: "", kg: "", rep: "", rir: "", note: "" };
-    try {
-      const raw = localStorage.getItem(PLAN_KEY);
-      return raw ? { ...base, ...JSON.parse(raw) } : base;
-    } catch { return base; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem(PLAN_KEY, JSON.stringify(plan)); } catch { /* storage non disponibile */ }
-  }, [plan]);
-  const set = (field, value) => setPlan((p) => ({ ...p, [field]: value }));
+function newPlanBlock(day, muscle) {
+  return {
+    id: uid(), day: day || dayNameFromDate(todayISO()), muscle: muscle || "",
+    exercise: "", serie: "", kg: "", rep: "", rir: "", note: ""
+  };
+}
 
+const PlanBlock = React.memo(function PlanBlock({ block, onChange, onDelete }) {
+  const mc = block.muscle ? MUSCLE_DARK_COLORS[block.muscle] : null;
   return (
-    <div className="col" style={{ gap: 14 }}>
-      <div className="card plan-week">
+    <div className="plan-block">
+      <div className="card plan-line">
         <h2 className="section-title">Settimana</h2>
-        <select className="input plan-select" value={plan.day} onChange={(e) => set("day", e.target.value)}>
+        <select className="input plan-select" value={block.day} onChange={(e) => onChange(block.id, "day", e.target.value)}>
           {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
+        <DeleteButton small onConfirm={() => onDelete(block.id)} />
       </div>
 
-      <div className="card">
-        <h2 className="section-title" style={{ marginBottom: 10 }}>Muscoli</h2>
-        <div className={"plan-tiles" + (plan.muscle ? " has-sel" : "")}>
-          {MUSCLE_GROUPS.map((m) => (
-            <div key={m} className={"plan-tile" + (plan.muscle === m ? " sel" : "")}
-              style={{ background: MUSCLE_DARK_COLORS[m] }}
-              onClick={() => set("muscle", plan.muscle === m ? "" : m)}>{m}</div>
-          ))}
-        </div>
+      <div className="card plan-line">
+        <h2 className="section-title">Muscoli</h2>
+        <select className="input plan-select" value={block.muscle}
+          style={mc ? { background: mc, color: "#ffffff", borderColor: mc } : undefined}
+          onChange={(e) => onChange(block.id, "muscle", e.target.value)}>
+          <option value="">—</option>
+          {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <span className="plan-spacer" />
       </div>
 
-      <div className="card">
-        <h2 className="section-title" style={{ marginBottom: 10 }}>Esercizio</h2>
-        <input className="input plan-exercise" placeholder="Es. Panca inclinata" value={plan.exercise} onChange={(e) => set("exercise", e.target.value)} />
+      <div className="card plan-line">
+        <h2 className="section-title">Esercizio</h2>
+        <input className="input plan-exercise" placeholder="Es. Panca inclinata" value={block.exercise} onChange={(e) => onChange(block.id, "exercise", e.target.value)} />
+        <span className="plan-spacer" />
       </div>
 
       <div className="plan-row">
         <div className="plan-box plan-sq">
           <span className="plan-label">Serie</span>
-          <input className="plan-input" type="number" inputMode="numeric" value={plan.serie} onChange={(e) => set("serie", e.target.value)} />
+          <input className="plan-input" type="number" inputMode="numeric" value={block.serie} onChange={(e) => onChange(block.id, "serie", e.target.value)} />
         </div>
         <div className="plan-box plan-kg">
           <span className="plan-label">Kg</span>
-          <input className="plan-input" type="number" inputMode="decimal" step="any" value={plan.kg} onChange={(e) => set("kg", e.target.value)} />
+          <input className="plan-input" type="number" inputMode="decimal" step="any" value={block.kg} onChange={(e) => onChange(block.id, "kg", e.target.value)} />
         </div>
         <div className="plan-box plan-sq plan-rep">
           <span className="plan-label">Rep</span>
-          <input className="plan-input" type="number" inputMode="numeric" value={plan.rep} onChange={(e) => set("rep", e.target.value)} />
+          <input className="plan-input" type="number" inputMode="numeric" value={block.rep} onChange={(e) => onChange(block.id, "rep", e.target.value)} />
         </div>
         <div className="plan-box plan-sq">
           <span className="plan-label">RIR</span>
-          <input className="plan-input" type="number" inputMode="numeric" value={plan.rir} onChange={(e) => set("rir", e.target.value)} />
+          <input className="plan-input" type="number" inputMode="numeric" value={block.rir} onChange={(e) => onChange(block.id, "rir", e.target.value)} />
         </div>
         <div className="plan-box plan-notebox">
           <span className="plan-label">Note</span>
-          <textarea className="plan-input plan-note" value={plan.note} onChange={(e) => set("note", e.target.value)} />
+          <textarea className="plan-input plan-note" value={block.note} onChange={(e) => onChange(block.id, "note", e.target.value)} />
         </div>
+      </div>
+    </div>
+  );
+});
+
+function SchedaAllenamentoTab() {
+  const [blocks, setBlocks] = useState(() => {
+    try {
+      const raw = localStorage.getItem(PLAN_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) return parsed.map((b) => ({ ...newPlanBlock(), ...b, id: b.id || uid() }));
+        // formato precedente: un solo blocco salvato come oggetto
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return [{ ...newPlanBlock(), ...parsed }];
+      }
+    } catch { /* dati non leggibili: si riparte da un blocco vuoto */ }
+    return [newPlanBlock()];
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(PLAN_KEY, JSON.stringify(blocks)); } catch { /* storage non disponibile */ }
+  }, [blocks]);
+
+  const update = React.useCallback((id, field, value) => {
+    setBlocks((bs) => bs.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
+  }, []);
+  const remove = React.useCallback((id) => {
+    setBlocks((bs) => bs.filter((b) => b.id !== id));
+  }, []);
+  function addBlock() {
+    setBlocks((bs) => {
+      const last = bs[bs.length - 1];
+      return [...bs, newPlanBlock(last ? last.day : undefined, last ? last.muscle : "")];
+    });
+  }
+
+  return (
+    <div className="col" style={{ gap: 14 }}>
+      {blocks.map((b) => <PlanBlock key={b.id} block={b} onChange={update} onDelete={remove} />)}
+      <div className="row" style={{ gap: 10 }}>
+        <button className="btn btn-primary" onClick={addBlock}><Plus size={18} /> Aggiungi blocco</button>
+        <span className="hint">{blocks.length} {blocks.length === 1 ? "blocco" : "blocchi"}</span>
       </div>
     </div>
   );
@@ -1183,24 +1223,23 @@ export default function App() {
         .group-ex-list{ display:flex; flex-direction:column; gap:4px; }
         .group-ex-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:15px; background:#E6ECF2; border:1px solid var(--border-c); }
         .group-ex-row-done span{ font-weight:700; color:#c0392b; }
-        .plan-week{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-        .plan-week .section-title{ white-space:nowrap; }
-        .plan-select{ width:auto; flex:1 1 150px; max-width:260px; font-size:16px; font-weight:700; }
-        .plan-exercise{ font-size:17px; font-weight:700; }
-        .plan-tiles{ display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:8px; }
-        .plan-tile{ color:#fff; font-weight:700; font-size:13px; text-align:center; padding:12px 6px; border-radius:8px; cursor:pointer; }
-        .plan-tile.sel{ box-shadow:0 0 0 3px #1a1a1a; }
-        .plan-tiles.has-sel .plan-tile:not(.sel){ opacity:.5; }
-        .plan-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
-        .plan-box{ height:88px; box-sizing:border-box; border-radius:10px; padding:8px 6px; display:flex; flex-direction:column; background:#ffffff; color:#1a1a1a; border:1px solid var(--border-c); flex:0 0 auto; }
-        .plan-sq{ width:88px; }
-        .plan-kg{ width:116px; background:#8b1a1a; color:#ffffff; border-color:#8b1a1a; }
+        .plan-block{ display:flex; flex-direction:column; gap:6px; padding-bottom:14px; border-bottom:2px solid var(--border-c); }
+        .card.plan-line{ display:flex; align-items:center; gap:10px; padding:5px 10px; }
+        .plan-line .section-title{ font-size:14px; flex:0 0 92px; white-space:nowrap; }
+        .plan-select{ width:auto; flex:1 1 auto; min-width:0; font-size:16px; font-weight:700; }
+        .plan-exercise{ flex:1 1 auto; min-width:0; font-size:16px; font-weight:700; }
+        .plan-spacer{ flex:0 0 32px; }
+        .plan-row{ display:flex; gap:4px; overflow-x:auto; }
+        .plan-box{ height:52px; box-sizing:border-box; border-radius:8px; padding:4px 3px; display:flex; flex-direction:column; background:#ffffff; color:#1a1a1a; border:1px solid var(--border-c); flex:0 0 auto; }
+        .plan-sq{ width:52px; }
+        .plan-kg{ width:90px; background:#8b1a1a; color:#ffffff; border-color:#8b1a1a; }
         .plan-rep{ background:#aef000; color:#000000; border-color:#aef000; }
-        .plan-notebox{ flex:1 0 190px; min-width:190px; }
-        .plan-label{ font-size:11px; font-weight:700; text-align:center; }
-        .plan-input{ flex:1; width:100%; min-height:0; border:none; background:transparent; color:inherit; font-family:inherit; font-size:30px; font-weight:700; text-align:center; outline:none; padding:0; -moz-appearance:textfield; appearance:textfield; }
+        .plan-notebox{ flex:1 1 auto; min-width:90px; }
+        .plan-label{ font-size:10px; line-height:1.1; font-weight:700; text-align:center; }
+        .plan-input{ flex:1; width:100%; min-height:0; border:none; background:transparent; color:inherit; font-family:inherit; font-size:22px; font-weight:700; text-align:center; outline:none; padding:0; -moz-appearance:textfield; appearance:textfield; }
+        .plan-kg .plan-input{ font-size:20px; }
         .plan-input::-webkit-outer-spin-button, .plan-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
-        .plan-note{ font-size:16px; text-align:left; resize:none; line-height:1.25; margin-top:2px; }
+        .plan-note{ font-size:13px; text-align:left; resize:none; line-height:1.15; }
         .dates-count-btn{ display:flex; align-items:center; gap:4px; background:#ffffff; border:1px solid var(--border-c); color:var(--text); font-weight:700; font-size:13px; padding:6px 10px; border-radius:6px; cursor:pointer; font-family:inherit; }
         .last-time-block{ margin-bottom:10px; }
         .muscoli-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
