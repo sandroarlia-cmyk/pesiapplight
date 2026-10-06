@@ -715,37 +715,45 @@ function applyPlanMarks(synced, ops, results) {
   return next;
 }
 
+// Casella di testo a una riga che si allunga andando a capo: le parole non vengono mai tagliate
+function AutoGrowText({ value, onChange, placeholder, className }) {
+  const ref = React.useRef(null);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + 2 + "px";
+  }, [value]);
+  return (
+    <textarea ref={ref} rows={1} className={className} placeholder={placeholder} value={value}
+      onChange={onChange} onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }} />
+  );
+}
+
 const PlanBlock = React.memo(function PlanBlock({ block, onChange, onDelete }) {
   const dc = DAY_COLORS[block.day] || DAY_PALETTE[0];
   const soft = block.muscle ? MUSCLE_SOFT_COLORS[block.muscle] : null;
   const noWrap = typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
   return (
     <div className="plan-block" style={{ borderLeftColor: dc.bg }}>
-      <div className="card plan-line">
-        <h2 className="section-title">Settimana</h2>
-        <select className="input plan-select" value={block.day}
-          style={{ background: dc.bg, color: dc.fg, borderColor: dc.bg }}
-          onChange={(e) => onChange(block.id, "day", e.target.value)}>
-          {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-        </select>
-        <DeleteButton small onConfirm={() => onDelete(block.id)} />
-      </div>
-
-      <div className="card plan-line">
-        <h2 className="section-title">Muscoli</h2>
+      <div className="card plan-line plan-line-top">
         <select className="input plan-select" value={block.muscle}
           style={soft ? { background: soft, color: "#1a1a1a", borderColor: soft } : undefined}
           onChange={(e) => onChange(block.id, "muscle", e.target.value)}>
           <option value="">—</option>
-          {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m}</option>)}
+          {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
         </select>
-        <span className="plan-spacer" />
+        <select className="input plan-select" value={block.day}
+          style={{ background: dc.bg, color: dc.fg, borderColor: dc.bg }}
+          onChange={(e) => onChange(block.id, "day", e.target.value)}>
+          {DAYS.map((d) => <option key={d} value={d}>{d.toUpperCase()}</option>)}
+        </select>
+        <span className="plan-trash"><DeleteButton small onConfirm={() => onDelete(block.id)} /></span>
       </div>
 
       <div className="card plan-line">
-        <h2 className="section-title">Esercizio</h2>
-        <input className="input plan-exercise" placeholder="Es. Panca inclinata" value={block.exercise} onChange={(e) => onChange(block.id, "exercise", e.target.value)} />
-        <span className="plan-spacer" />
+        <AutoGrowText className="input plan-exercise" placeholder="Es. Panca inclinata" value={block.exercise}
+          onChange={(e) => onChange(block.id, "exercise", e.target.value)} />
       </div>
 
       <div className="plan-row">
@@ -1449,10 +1457,10 @@ export default function App() {
         .plan-status.ok{ color:#1f6b3a; }
         .plan-status.error{ color:#c0392b; }
         .card.plan-line{ display:flex; align-items:center; gap:10px; padding:5px 10px; }
-        .plan-line .section-title{ font-size:14px; flex:0 0 92px; white-space:nowrap; }
-        .plan-select{ width:auto; flex:1 1 auto; min-width:0; font-size:16px; font-weight:700; }
-        .plan-exercise{ flex:1 1 auto; min-width:0; font-size:16px; font-weight:700; }
-        .plan-spacer{ flex:0 0 32px; }
+        .plan-line-top{ justify-content:flex-start; gap:8px; }
+        .plan-select{ width:auto; flex:1 1 0; min-width:0; max-width:260px; height:50px; font-size:15px; font-weight:700; text-transform:uppercase; padding:8px; }
+        .plan-trash{ margin-left:auto; flex:0 0 auto; display:flex; }
+        .plan-exercise{ flex:1 1 auto; width:100%; min-width:0; font-size:16px; font-weight:700; line-height:1.3; resize:none; overflow:hidden; display:block; }
         .plan-row{ display:flex; gap:4px; overflow-x:auto; }
         .plan-box{ height:52px; box-sizing:border-box; border-radius:8px; padding:4px 3px; display:flex; flex-direction:column; background:#ffffff; color:#1a1a1a; border:1px solid var(--border-c); flex:0 0 auto; }
         .plan-sq{ width:52px; }
@@ -1540,6 +1548,7 @@ export default function App() {
           .input-kg, .box-kg{ font-size:22px; }
           .group-ex-row span{ font-weight:700; }
           .input-discs, .box-discs{ background:#ffd9d3; font-weight:700; font-size:18px; }
+          .plan-select{ font-size:13px; padding:8px 6px; }
           .plan-kg{ width:72px; }
           .plan-kg .plan-input{ font-size:17px; }
           .plan-notebox{ flex:0 0 320px; min-width:320px; }
