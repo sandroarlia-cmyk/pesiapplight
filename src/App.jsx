@@ -622,12 +622,6 @@ const DAY_PALETTE = [
 const DAY_COLORS = {};
 DAYS.forEach((d, i) => { DAY_COLORS[d] = DAY_PALETTE[i]; });
 
-// Colori dei muscoli chiari e tenui, solo per questa scheda
-const MUSCLE_SOFT_COLORS = {
-  Petto: "#f4c7c3", Spalle: "#f6dca8", Dorso: "#c4d4f0", Gambe: "#e6e6a8",
-  Bicipiti: "#f6cdb8", Tricipiti: "#b8e3e3", Calisthenics: "#f1c1d9", Addome: "#cfd6df"
-};
-
 function newPlanBlock(day, muscle) {
   return {
     id: uid(), day: day || dayNameFromDate(todayISO()), muscle: muscle || "",
@@ -732,19 +726,19 @@ function AutoGrowText({ value, onChange, placeholder, className }) {
 
 const PlanBlock = React.memo(function PlanBlock({ block, onChange, onDelete }) {
   const dc = DAY_COLORS[block.day] || DAY_PALETTE[0];
-  const soft = block.muscle ? MUSCLE_SOFT_COLORS[block.muscle] : null;
+  const mcol = block.muscle ? MUSCLE_DARK_COLORS[block.muscle] : null;
   const noWrap = typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
   return (
     <div className="plan-block" style={{ borderLeftColor: dc.bg }}>
       <div className="card plan-line plan-line-top">
         <select className="input plan-select" value={block.muscle}
-          style={soft ? { background: soft, color: "#1a1a1a", borderColor: soft } : undefined}
+          style={mcol ? { background: mcol, color: "#ffffff", borderColor: mcol } : undefined}
           onChange={(e) => onChange(block.id, "muscle", e.target.value)}>
           <option value="">—</option>
           {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
         </select>
         <select className="input plan-select" value={block.day}
-          style={{ background: dc.bg, color: dc.fg, borderColor: dc.bg }}
+          style={{ background: "#ffffff", color: "#1a1a1a" }}
           onChange={(e) => onChange(block.id, "day", e.target.value)}>
           {DAYS.map((d) => <option key={d} value={d}>{d.toUpperCase()}</option>)}
         </select>
