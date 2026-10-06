@@ -1458,7 +1458,8 @@ export default function App() {
         .plan-status.error{ color:#c0392b; }
         .card.plan-line{ display:flex; align-items:center; gap:10px; padding:5px 10px; }
         .plan-line-top{ justify-content:flex-start; gap:8px; }
-        .plan-select{ width:auto; flex:1 1 0; min-width:0; max-width:260px; height:50px; font-size:15px; font-weight:700; text-transform:uppercase; padding:8px; }
+        .plan-select{ width:auto; flex:1 1 0; min-width:0; max-width:260px; height:50px; font-size:19px; font-weight:700; text-transform:uppercase; padding:8px; }
+        .plan-line-top > select:first-child{ flex-grow:1.15; }
         .plan-trash{ margin-left:auto; flex:0 0 auto; display:flex; }
         .plan-exercise{ flex:1 1 auto; width:100%; min-width:0; font-size:16px; font-weight:700; line-height:1.3; resize:none; overflow:hidden; display:block; }
         .plan-row{ display:flex; gap:4px; overflow-x:auto; }
@@ -1548,7 +1549,7 @@ export default function App() {
           .input-kg, .box-kg{ font-size:22px; }
           .group-ex-row span{ font-weight:700; }
           .input-discs, .box-discs{ background:#ffd9d3; font-weight:700; font-size:18px; }
-          .plan-select{ font-size:13px; padding:8px 6px; }
+          .plan-select{ font-size:17px; font-weight:700; padding:8px 6px; }
           .plan-kg{ width:72px; }
           .plan-kg .plan-input{ font-size:17px; }
           .plan-notebox{ flex:0 0 320px; min-width:320px; }
