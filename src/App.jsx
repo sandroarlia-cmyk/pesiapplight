@@ -1156,7 +1156,7 @@ function AllenamentiTab({ workouts, exercises }) {
                 <div className="promemoria-col-date">{formatDateShort(d.dateIso)}</div>
                 <div className="promemoria-list">
                   {d.muscles.map((m) => (
-                    <div key={m} className="promemoria-muscle-box" style={{ background: MUSCLE_DARK_COLORS[m] || MUSCLE_DARK_COLORS.Altro, cursor: "pointer" }}
+                    <div key={m} className="promemoria-muscle-box" style={{ ...tileVars(MUSCLE_DARK_COLORS[m] || MUSCLE_DARK_COLORS.Altro), cursor: "pointer" }}
                       onClick={() => { setPopup({ dateIso: d.dateIso, muscle: m }); setOpenPopupItem(null); }}>
                       {m.toUpperCase()}
                     </div>
@@ -1507,13 +1507,14 @@ export default function App() {
         .promemoria-col-head{ font-weight:700; font-size:12px; text-align:center; color:var(--accent); text-transform:uppercase; }
         .promemoria-col-date{ font-size:11px; text-align:center; color:var(--text-dim); padding-bottom:6px; border-bottom:1px solid var(--border-c); }
         .promemoria-list{ display:flex; flex-direction:column; gap:6px; flex:1; }
-        .promemoria-muscle-box{ border-radius:6px; padding:6px 7px; font-size:11px; font-weight:700; color:#fff; text-align:center; }
+        .promemoria-muscle-box{ border-radius:12px; padding:8px 7px; font-size:11px; font-weight:700; color:#fff; text-align:center; user-select:none; background:radial-gradient(circle at 30% 20%, var(--cl), var(--c) 55%, var(--cd)); box-shadow:inset 0 2px 3px rgba(255,255,255,.3), inset 0 -5px 8px rgba(0,0,0,.35), 0 4px 8px rgba(0,0,0,.3); }
+        .promemoria-muscle-box:active{ transform:scale(.96); }
         .promemoria-empty{ text-align:center; color:var(--text-dim); font-size:12px; opacity:0.5; }
         .settimana-popup-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
         .settimana-popup{ background:var(--surface); border-radius:12px; padding:20px; max-width:420px; width:100%; max-height:80vh; overflow-y:auto; }
         .settimana-popup-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; font-size:17px; font-weight:700; }
         .settimana-popup-list{ display:flex; flex-direction:column; gap:12px; }
-        .settimana-popup-item{ background:#E6ECF2; border-radius:8px; padding:12px 14px; }
+        .settimana-popup-item{ --c:#f1f3f6; --cl:#ffffff; --cd:#cfd6e0; background:radial-gradient(circle at 30% 20%, var(--cl), var(--c) 55%, var(--cd)); border-radius:16px; padding:12px 14px; box-shadow:inset 0 2px 4px rgba(255,255,255,.5), inset 0 -6px 9px rgba(0,0,0,.15), 0 5px 9px rgba(0,0,0,.25); }
         .settimana-popup-item-name{ font-weight:700; margin-bottom:8px; }
         .settimana-popup-item-stats{ display:flex; gap:10px; flex-wrap:wrap; }
         .settimana-popup-badge{ padding:6px 12px; border-radius:6px; font-weight:700; font-size:13px; }
