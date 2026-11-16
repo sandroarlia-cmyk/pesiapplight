@@ -1626,6 +1626,15 @@ export default function App() {
         @media (max-width: 640px){
           .input-discs, .box-discs{ --c:#ffd9d3; }
         }
+
+        /* Scheda Allenamento: riquadri dati in stile "appena rialzato" */
+        .plan-box{
+          background-image:none; background-color:var(--c);
+          border:1px solid rgba(0,0,0,.12); border-bottom:3px solid rgba(0,0,0,.3);
+          border-radius:8px; box-shadow:none; --c:#ffffff;
+        }
+        .plan-box.plan-kg{ --c:#8b1a1a; }
+        .plan-box.plan-rep{ --c:#aef000; }
       `}</style>
 
       <div className="gt-header">
