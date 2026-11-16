@@ -1583,6 +1583,29 @@ export default function App() {
           .promemoria-grid{ grid-template-columns:repeat(7, 118px); overflow-x:auto; padding-bottom:6px; }
           .progressi-dark{ padding:10px; border-radius:8px; max-width:100%; box-sizing:border-box; overflow-x:hidden; }
         }
+
+        /* Riquadri tridimensionali (cuscino) — pagina muscolo */
+        .box-kg, .box-rip, .box-rir, .box-note, .box-discs, .box-date, .box-serie, .input-kg, .input-rip, .input-rir, .input-discs, .input-note, .group-ex-row, .history-ex-title-row, .dates-count-btn, .exercise-block{
+          --c:#f1f3f6; --cl:#ffffff; --cd:#d3d9e2;
+          background-color:var(--c); background-image:radial-gradient(circle at 30% 20%, var(--cl), var(--c) 55%, var(--cd));
+          border:none; border-radius:12px;
+          box-shadow:inset 0 2px 4px rgba(255,255,255,.45), inset 0 -5px 8px rgba(0,0,0,.2), 0 4px 8px rgba(0,0,0,.25);
+        }
+        .box-kg, .input-kg{ --c:#8b1a1a; --cl:#b04a4a; --cd:#681414; color:#ffffff; }
+        .box-rip, .input-rip{ --c:#aef000; --cl:#d0f862; --cd:#8bc000; color:#000000; }
+        .box-serie{ --c:#3E7191; --cl:#6e97b0; --cd:#2d5469; color:#ffffff; }
+        .box-date{ color:#1a1a1a; }
+        .group-ex-row, .history-ex-title-row, .exercise-block{ --c:#e6ecf2; --cl:#ffffff; --cd:#c3ccd8; border-radius:16px; }
+        .group-ex-row{ padding:12px 14px; }
+        .group-ex-list{ gap:10px; }
+        .history-ex-card{ border:none; overflow:visible; }
+        .history-ex-title-row{ padding:12px 16px; }
+        .history-date-card{ margin-top:8px; border:1px solid var(--border-c); border-radius:12px; }
+        .set-table{ padding-bottom:8px; padding-right:2px; }
+        .group-ex-row:active, .history-ex-title-row:active, .dates-count-btn:active{ transform:scale(.98); }
+        @media (max-width: 640px){
+          .input-discs, .box-discs{ --c:#ffd9d3; --cl:#fff0ed; --cd:#e8a89f; }
+        }
       `}</style>
 
       <div className="gt-header">
