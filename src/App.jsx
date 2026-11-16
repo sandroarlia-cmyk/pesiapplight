@@ -1635,6 +1635,11 @@ export default function App() {
         }
         .plan-box.plan-kg{ --c:#8b1a1a; }
         .plan-box.plan-rep{ --c:#aef000; }
+        .plan-exercise{
+          --c:#ffffff; background-image:none; background-color:var(--c);
+          border:1px solid rgba(0,0,0,.12); border-bottom:3px solid rgba(0,0,0,.3);
+          border-radius:8px; box-shadow:none;
+        }
       `}</style>
 
       <div className="gt-header">
