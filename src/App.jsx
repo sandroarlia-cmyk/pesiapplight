@@ -1640,6 +1640,10 @@ export default function App() {
           border:1px solid rgba(0,0,0,.12); border-bottom:3px solid rgba(0,0,0,.3);
           border-radius:8px; box-shadow:none;
         }
+
+        /* Conferma (elimina): stile "appena rialzato" */
+        .btn-danger{ background-image:none; background-color:#c0392b; color:#ffffff; border:1px solid rgba(0,0,0,.12); border-bottom:3px solid rgba(0,0,0,.3); border-radius:8px; box-shadow:none; }
+        .btn-danger:active{ transform:scale(.96); }
       `}</style>
 
       <div className="gt-header">
