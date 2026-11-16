@@ -1615,6 +1615,17 @@ export default function App() {
         @media (max-width: 640px){
           .input-discs, .box-discs{ --c:#ffd9d3; --cl:#fff0ed; --cd:#e8a89f; }
         }
+
+        /* Tabella serie: stile "appena rialzato" (piatto con bordino sotto) */
+        .box-kg, .box-rip, .box-rir, .box-note, .box-discs, .input-kg, .input-rip, .input-rir, .input-discs, .input-note{
+          background-image:none; background-color:var(--c);
+          border:1px solid rgba(0,0,0,.12); border-bottom:3px solid rgba(0,0,0,.3);
+          border-radius:8px; box-shadow:none;
+        }
+        .box-rir, .box-note, .box-discs, .input-rir, .input-note, .input-discs{ --c:#ffffff; }
+        @media (max-width: 640px){
+          .input-discs, .box-discs{ --c:#ffd9d3; }
+        }
       `}</style>
 
       <div className="gt-header">
