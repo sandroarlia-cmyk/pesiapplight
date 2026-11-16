@@ -741,13 +741,12 @@ const PlanBlock = React.memo(function PlanBlock({ block, onChange, onDelete }) {
     <div className="plan-block" style={{ borderLeftColor: dc.bg }}>
       <div className="card plan-line plan-line-top">
         <select className="input plan-select" value={block.muscle}
-          style={mcol ? { background: mcol, color: "#ffffff", borderColor: mcol } : undefined}
+          style={mcol ? { ...tileVars(mcol), color: "#ffffff" } : undefined}
           onChange={(e) => onChange(block.id, "muscle", e.target.value)}>
           <option value="">—</option>
           {MUSCLE_GROUPS.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
         </select>
         <select className="input plan-select" value={block.day}
-          style={{ background: "#ffffff", color: "#1a1a1a" }}
           onChange={(e) => onChange(block.id, "day", e.target.value)}>
           {DAYS.map((d) => <option key={d} value={d}>{d.toUpperCase()}</option>)}
         </select>
@@ -903,7 +902,7 @@ function SchedaAllenamentoTab() {
     <div className="col" style={{ gap: 14 }}>
       <div className="plan-topbar">
         <div className="plan-save">
-          <button className="btn btn-primary" onClick={saveAll} disabled={status === "saving"}><Save size={18} /> Salva</button>
+          <button className="btn btn-primary plan-savebtn" onClick={saveAll} disabled={status === "saving"}><Save size={18} /> Salva</button>
           <span className={"plan-status " + status}>{statusText}</span>
         </div>
         <div className="card plan-filter">
@@ -915,7 +914,7 @@ function SchedaAllenamentoTab() {
               const on = filterDay === d;
               return (
                 <button key={d} className="plan-chip" onClick={() => setFilterDay(d)}
-                  style={on ? { background: c.bg, color: c.fg, borderColor: c.bg } : { borderColor: c.bg }}>{d}</button>
+                  style={on ? { ...tileVars(c.bg), color: c.fg, borderColor: c.bg } : { borderColor: c.bg }}>{d}</button>
               );
             })}
           </div>
@@ -924,7 +923,7 @@ function SchedaAllenamentoTab() {
       {visible.map((b) => <PlanBlock key={b.id} block={b} onChange={update} onDelete={remove} />)}
       {visible.length === 0 && <p className="muted">Nessun blocco per {filterDay === "all" ? "la settimana" : filterDay}.</p>}
       <div className="row" style={{ gap: 10 }}>
-        <button className="btn btn-primary" onClick={addBlock}><Plus size={18} /> Aggiungi blocco</button>
+        <button className="btn btn-primary plan-add" onClick={addBlock}><Plus size={18} /> Aggiungi blocco</button>
         <span className="hint">
           {filterDay === "all"
             ? blocks.length + (blocks.length === 1 ? " blocco" : " blocchi")
@@ -1471,6 +1470,14 @@ export default function App() {
         .plan-kg{ width:90px; background:#8b1a1a; color:#ffffff; border-color:#8b1a1a; }
         .plan-rep{ background:#aef000; color:#000000; border-color:#aef000; }
         .plan-notebox{ flex:1 1 auto; min-width:90px; }
+        .plan-select, .plan-exercise, .plan-box, .plan-chip, .plan-savebtn, .plan-add{ --c:#f1f3f6; --cl:#ffffff; --cd:#d3d9e2; background-color:var(--c); background-image:radial-gradient(circle at 30% 20%, var(--cl), var(--c) 55%, var(--cd)); border:none; border-radius:14px; box-shadow:inset 0 2px 4px rgba(255,255,255,.45), inset 0 -6px 9px rgba(0,0,0,.2), 0 5px 9px rgba(0,0,0,.25); }
+        .plan-chip{ border:2px solid #1a1a1a; border-radius:14px; }
+        .plan-chip-all.on{ --c:#1a1a1a; --cl:#4a4a4a; --cd:#000000; color:#ffffff; }
+        .plan-box.plan-kg{ --c:#8b1a1a; --cl:#b04a4a; --cd:#681414; color:#ffffff; }
+        .plan-box.plan-rep{ --c:#aef000; --cl:#d0f862; --cd:#8bc000; color:#000000; }
+        .plan-savebtn, .plan-add{ --c:var(--accent); --cl:color-mix(in srgb, var(--accent) 70%, #ffffff); --cd:color-mix(in srgb, var(--accent) 70%, #000000); color:#fff; }
+        .plan-select, .plan-exercise{ color:#1a1a1a; }
+        .plan-chip:active, .plan-savebtn:active, .plan-add:active{ transform:scale(.96); }
         .plan-label{ font-size:10px; line-height:1.1; font-weight:700; text-align:center; }
         .plan-input{ flex:1; width:100%; min-height:0; border:none; background:transparent; color:inherit; font-family:inherit; font-size:22px; font-weight:700; text-align:center; outline:none; padding:0; -moz-appearance:textfield; appearance:textfield; }
         .plan-kg .plan-input{ font-size:20px; }
