@@ -1603,6 +1603,15 @@ export default function App() {
         .history-date-card{ margin-top:8px; border:1px solid var(--border-c); border-radius:12px; }
         .set-table{ padding-bottom:8px; padding-right:2px; }
         .group-ex-row:active, .history-ex-title-row:active, .dates-count-btn:active{ transform:scale(.98); }
+        .date-it-picker select.input, .btn-primary{
+          --c:#f1f3f6; --cl:#ffffff; --cd:#d3d9e2;
+          background-color:var(--c); background-image:radial-gradient(circle at 30% 20%, var(--cl), var(--c) 55%, var(--cd));
+          border:none; border-radius:14px;
+          box-shadow:inset 0 2px 4px rgba(255,255,255,.45), inset 0 -6px 9px rgba(0,0,0,.2), 0 5px 9px rgba(0,0,0,.25);
+        }
+        .date-it-picker select.input{ color:#1a1a1a; font-weight:700; padding:11px 8px; }
+        .btn-primary{ --c:var(--accent); --cl:color-mix(in srgb, var(--accent) 70%, #ffffff); --cd:color-mix(in srgb, var(--accent) 70%, #000000); color:#ffffff; }
+        .btn-primary:active{ transform:scale(.96); }
         @media (max-width: 640px){
           .input-discs, .box-discs{ --c:#ffd9d3; --cl:#fff0ed; --cd:#e8a89f; }
         }
