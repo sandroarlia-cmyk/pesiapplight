@@ -590,12 +590,21 @@ function CustomSlot({ onAdd }) {
   );
 }
 
+function tileVars(hex) {
+  const mix = (t, k) => {
+    const n = parseInt(hex.slice(1), 16);
+    const ch = [n >> 16, (n >> 8) & 255, n & 255].map((v) => Math.round(v + (t - v) * k));
+    return "#" + ch.map((v) => v.toString(16).padStart(2, "0")).join("");
+  };
+  return { "--c": hex, "--cl": mix(255, 0.25), "--cd": mix(0, 0.25) };
+}
+
 function MuscoliTab({ onSelectMuscle }) {
   return (
     <div className="card">
       <div className="muscoli-grid">
         {MUSCLE_GROUPS.map((m) => (
-          <div key={m} className="muscoli-tile" style={{ background: MUSCLE_DARK_COLORS[m] }} onClick={() => onSelectMuscle(m)}>{m.toUpperCase()}</div>
+          <div key={m} className="muscoli-tile" style={tileVars(MUSCLE_DARK_COLORS[m])} onClick={() => onSelectMuscle(m)}>{m.toUpperCase()}</div>
         ))}
       </div>
     </div>
@@ -1470,7 +1479,8 @@ export default function App() {
         .dates-count-btn{ display:flex; align-items:center; gap:4px; background:#ffffff; border:1px solid var(--border-c); color:var(--text); font-weight:700; font-size:13px; padding:6px 10px; border-radius:6px; cursor:pointer; font-family:inherit; }
         .last-time-block{ margin-bottom:10px; }
         .muscoli-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
-        .muscoli-tile{ padding:22px 14px; border-radius:8px; color:#fff; font-weight:700; font-size:16px; text-align:center; cursor:pointer; }
+        .muscoli-tile{ padding:22px 14px; border-radius:18px; color:#fff; font-weight:700; font-size:16px; text-align:center; cursor:pointer; user-select:none; background:radial-gradient(circle at 30% 20%, var(--cl), var(--c) 55%, var(--cd)); box-shadow:inset 0 2px 4px rgba(255,255,255,.3), inset 0 -8px 12px rgba(0,0,0,.35), 0 6px 12px rgba(0,0,0,.3); transition:transform .08s; }
+        .muscoli-tile:active{ transform:scale(.96); }
         .history-ex-card{ border:1px solid var(--border-c); border-radius:8px; overflow:hidden; }
         .history-ex-title-row{ display:flex; justify-content:space-between; align-items:center; padding:10px 14px; cursor:pointer; background:#E6ECF2; }
         .chevron{ transition:transform 0.15s; }
