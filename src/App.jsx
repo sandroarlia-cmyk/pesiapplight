@@ -738,7 +738,7 @@ const PlanBlock = React.memo(function PlanBlock({ block, onChange, onDelete }) {
   const mcol = block.muscle ? MUSCLE_DARK_COLORS[block.muscle] : null;
   const noWrap = typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
   return (
-    <div className="plan-block" style={{ borderLeftColor: dc.bg }}>
+    <div className="plan-block">
       <div className="card plan-line plan-line-top">
         <select className="input plan-select" value={block.muscle}
           style={mcol ? { ...tileVars(mcol), color: "#ffffff" } : undefined}
@@ -1447,7 +1447,7 @@ export default function App() {
         .group-ex-list{ display:flex; flex-direction:column; gap:4px; }
         .group-ex-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:15px; background:#E6ECF2; border:1px solid var(--border-c); }
         .group-ex-row-done span{ font-weight:700; color:#c0392b; }
-        .plan-block{ display:flex; flex-direction:column; gap:6px; padding:0 0 14px 8px; border-bottom:2px solid var(--border-c); border-left:6px solid var(--border-c); }
+        .plan-block{ display:flex; flex-direction:column; gap:6px; padding:0 0 14px 0; border-bottom:2px solid var(--border-c); }
         .plan-topbar{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
         .plan-save{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
         .card.plan-filter{ flex:1 1 300px; max-width:480px; margin-left:auto; padding:8px 10px; }
