@@ -1644,6 +1644,14 @@ export default function App() {
         /* Conferma (elimina): stile "appena rialzato" */
         .btn-danger{ background-image:none; background-color:#c0392b; color:#ffffff; border:1px solid rgba(0,0,0,.12); border-bottom:3px solid rgba(0,0,0,.3); border-radius:8px; box-shadow:none; }
         .btn-danger:active{ transform:scale(.96); }
+
+        /* Riga Muscolo + Giorno: metà altezza, caselle a larghezza fissa, testo centrato */
+        .plan-line-top > select.plan-select{
+          flex:0 0 auto; width:142px; max-width:none; min-width:0; height:26px; padding:0 4px; box-sizing:border-box;
+          font-size:14px; font-weight:700; line-height:26px; border-radius:10px;
+          text-align:center; text-align-last:center; -webkit-appearance:none; appearance:none; white-space:nowrap; overflow:hidden; text-overflow:clip;
+        }
+        .plan-line-top > select.plan-select:nth-of-type(2){ width:112px; }
       `}</style>
 
       <div className="gt-header">
